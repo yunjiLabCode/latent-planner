@@ -9,4 +9,5 @@ mkdir -p /data/yunji/latent-planner-work/logs
 {
   printf 'latent-planner %s\n' "$(git rev-parse HEAD)"
   printf 'RPent %s\n' "$(git -C RPent rev-parse HEAD)"
+  printf 'AgenticRoboRL %s\n' "$(git -C AgenticRoboRL rev-parse HEAD)"
 } > /data/yunji/latent-planner-work/logs/code_version.txt
