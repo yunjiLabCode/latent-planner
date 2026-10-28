@@ -1,0 +1,27 @@
+{
+  "run_artifacts": [],
+  "steps": [
+    {
+      "step_idx": 0,
+      "state": {"robot0_eef_pos": [0.0, 0.0, 0.4]},
+      "terminated": false,
+      "truncated": false,
+      "artifacts": ["agentview.png", "wrist.png"]
+    },
+    {
+      "step_idx": 1,
+      "state": {"robot0_eef_pos": [0.0, 0.0, 0.5]},
+      "terminated": true,
+      "truncated": false,
+      "artifacts": ["agentview.png", "wrist.png"],
+      "command": {"action": "pi0_pick", "prompt": "pick up the bowl"},
+      "result": {
+        "name": "pick",
+        "success": true,
+        "terminated": true,
+        "truncated": false
+      },
+      "elapsed_s": 1.5
+    }
+  ]
+}

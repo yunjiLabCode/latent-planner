@@ -1,0 +1,27 @@
+{
+  "run_artifacts": [],
+  "steps": [
+    {
+      "step_idx": 0,
+      "state": {},
+      "terminated": false,
+      "truncated": false,
+      "artifacts": ["agentview.png", "wrist.png"]
+    },
+    {
+      "step_idx": 1,
+      "state": {},
+      "terminated": false,
+      "truncated": true,
+      "artifacts": ["agentview.png"],
+      "command": {"action": "pi0_pick", "prompt": "pick up the mug", "max_chunks": 24},
+      "result": {
+        "name": "pick",
+        "success": false,
+        "terminated": false,
+        "truncated": true
+      },
+      "elapsed_s": 4.0
+    }
+  ]
+}

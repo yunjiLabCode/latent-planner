@@ -1,0 +1,23 @@
+{
+  "suite": "libero_goal",
+  "task": 2,
+  "seed": 13,
+  "model": "openai-chat:qwen",
+  "solved": true,
+  "environment_success": true,
+  "messages": [
+    {
+      "role": "assistant",
+      "content": [
+        {"type": "text", "text": "Grasp the mug."},
+        {"type": "tool_use", "id": "b1", "name": "view_env_state", "input": {"step": -1}},
+        {
+          "type": "tool_use",
+          "id": "b2",
+          "name": "pi0_pick",
+          "input": {"prompt": "pick up the mug", "max_chunks": 24}
+        }
+      ]
+    }
+  ]
+}

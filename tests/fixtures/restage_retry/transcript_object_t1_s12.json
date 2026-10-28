@@ -1,0 +1,38 @@
+{
+  "suite": "libero_object",
+  "task": 1,
+  "seed": 12,
+  "model": "openai-chat:qwen",
+  "solved": true,
+  "messages": [
+    {
+      "role": "assistant",
+      "content": [
+        {"type": "text", "text": "Try the pick."},
+        {"type": "tool_use", "id": "a1", "name": "view_env_state", "input": {"step": 0}},
+        {"type": "tool_use", "id": "a2", "name": "pi0_pick", "input": {"prompt": "pick up the bowl"}}
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {"type": "text", "text": "Restage above the bowl."},
+        {"type": "tool_use", "id": "a3", "name": "segment", "input": {"prompt": "bowl", "camera": "agentview"}},
+        {"type": "tool_use", "id": "a4", "name": "move_to", "input": {"xyz": [0.1, 0.0, 0.2], "gripper": 1}}
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {"type": "text", "text": "Pick again."},
+        {"type": "tool_use", "id": "a5", "name": "pi0_pick", "input": {"prompt": "pick up the bowl"}}
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {"type": "tool_use", "id": "a6", "name": "finish", "input": {"status": "success", "summary": "picked"}}
+      ]
+    }
+  ]
+}
