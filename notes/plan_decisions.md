@@ -45,3 +45,11 @@ proxy는 쓰지 않는다. 평가 경로(`eval.direct`)에서는 안 켜지고, 
 pi0.5 predict는 bf16 평균 0.84초, fp16 래퍼는 0.34초다. 병목은 플래너일 가능성이 커서 이 VLA 간격이 수집 시간에 크게 작용하지 않을 수 있다. fp16 래퍼는 RPent를 바꾸고 frozen-VLA와 충돌한다. HarnessVLA와 AgenticRoboRL 수치는 bf16이다. action 차이는 0.87%라 폐루프에서 쌓일 수 있다.
 
 결정: 수집 dtype은 bf16으로 둔다. fp16 래퍼는 쓰지 않는다. 단계 5에서 VLA가 에피소드 시간의 대부분임이 보일 때만 다시 본다.
+
+## 6. 실행 결정만 대체하면 가속이 작다
+
+2026-10-29. 근거는 `notes/smoke_episode_01.md`.
+
+플래너 턴 36개 중 실행 결정은 10개, 쿼리는 32개였다. 쿼리는 `segment`, `view_env_state`, `back_project` 같은 호출이다.
+
+결정: 실행 결정만 바꾸는 latent planner의 가속은 제한적이다. 쿼리 동작, 특히 실패 감지로 쓰이는 `view_env_state`는 observation 입력과 decoder가 흡수해야 한다. part 2를 설계할 때 다시 본다.

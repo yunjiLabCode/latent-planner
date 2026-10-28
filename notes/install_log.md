@@ -150,3 +150,44 @@ freeze: `notes/env/rpent_env_freeze.txt`. Hawaii 원본은 `/data/yunji/latent-p
 `/tmp/primitive_videos`는 없다. 새 primitive 영상도 없다. `~/.libero`와 `~/.liberopro`도 없다.
 
 전체 실행 로그: `/data/yunji/latent-planner-work/logs/install_log.md`.
+
+## 단계 5 — 스모크 에피소드 (2026-10-29)
+
+완료. 상세는 `notes/smoke_episode_01.md`. 서버는 끝난 뒤 멈춤. tmux `stage5-episode` 정지. GPU 3은 미사용, 7 MiB 유지. 종료 후 GPU 0–3 유휴, 7 MiB.
+
+### 결과
+
+`success` true. `libero_spatial_task` task 0, init/seed 11. `states.json` 마지막 `step_idx` 10, action `release`, `terminated` true.
+
+출력: `/data/yunji/latent-planner-work/outputs/smoke/libero_spatial_task/task_00/seed_011/attempt_00`.
+
+로그: `/data/yunji/latent-planner-work/logs/stage5_episode.log`, `vllm_serve_stage5.log`, `install_log.md`, `smoke_episode_01.md`.
+
+### 시간
+
+벽시계 1235 s. 에이전트 루프 1214.2 s. 턴 36/100. vLLM 요청 36.
+
+- planner 1126.34 s (`e2e_request_latency_seconds` 합).
+- VLA 9.43 s (`states.json` `elapsed_s`: `pi0_pick` 9.43, `pi0_doubled` 0).
+- SAM3 9 s (segment 3, `run.log` 구간 1초, `states.json`에 없음).
+- 나머지 90.23 s (`move_to` 9.71, `set_gripper` 0.49, `release` 0.20, 시작과 1초 미만 읽기 전용 툴).
+
+prefix cache 히트 88.27% (1441440/1632978). 쿼리 수 = prompt 토큰 수. 첫 요청 cold miss, prompt 토큰 12356에서 히트 0. 로그 끝: `Prefix cache hit rate: 88.3%`.
+
+턴, 컨텍스트 토큰, e2e 초: 1 12356 8.86; 2 23095 12.28; 3 31289 13.31; 4 34709 7.36; 5 37386 65.50; 6 37975 5.04; 7 38187 4.17; 8 38386 17.30; 9 38601 4.47; 10 38832 71.58; 11 40122 10.91; 12 41389 14.16; 13 41630 9.96; 14 41829 14.22; 15 43077 222.06; 16 43481 92.42; 17 44702 26.66; 18 45733 25.56; 19 46895 29.65; 20 47713 43.17; 21 49616 91.47; 22 49883 50.41; 23 50906 34.82; 24 51013 32.34; 25 52001 28.22; 26 53830 37.59; 27 54061 31.86; 28 54319 6.49; 29 55079 30.10; 30 55844 41.14; 31 56056 5.97; 32 56210 3.69; 33 56351 5.87; 34 56672 5.31; 35 56813 11.17; 36 56937 11.25. prompt 토큰 합 1632978. 지연 합 1126.34 s.
+
+### trace
+
+스키마 v0.2.1. 출력 `outputs/smoke/traces/smoke/libero_spatial_task_t00_seed011`. `matched` true. `conversion.warnings` 비어 있음. decisions 10. primitive `move_to` 7, `pi0_pick` 1, `set_gripper` 1, `release` 1. roles `new` 10. `recovery_episodes` 비어 있음. context 호출 32, decisions에 넣지 않음.
+
+### 영상
+
+`RPENT_PRIMITIVE_VIDEO_DIR` `/data/yunji/latent-planner-work/outputs/primitive_videos`는 설정·상속됐으나 비어 있음. env 서버는 `video_cfg`만 저장하고 `RecordVideo.flush_video`는 호출하지 않음. 에이전트 `episode.mp4`는 imageio에 ffmpeg/pyav 백엔드가 없어 실패. mp4 없음. `/tmp/primitive_videos` 없음. 실행 전 스냅샷 대비 `/tmp` 새 경로 0, `/home/yunji` 증가 0. `TMPDIR`과 `HOME`은 `/data/yunji/latent-planner-work` 아래.
+
+### 규모 (1235 s 평균, env 세트 1개)
+
+- 2720 에피소드 (스위트 8 × task 10 × init 11–44) = 3359200 s = 933.1 h = 38.9일.
+- 작은 계획: 스위트 4 × task 10 × init 11–20 = 400 에피소드 = 494000 s = 137.2 h = 5.7일.
+- GPU 2 피크 17320 MiB / 24576 MiB. 풀 스택 둘은 34640 MiB. 한 번에 env 세트 1개. 피크 여유 7256 MiB.
+
+이 에피소드는 `pi0_pick` 1회, recovery 없음. 더 어려운 task는 더 길다. 지연은 컨텍스트 길이에 단조가 아니다.
