@@ -78,3 +78,6 @@ sync 뒤에 Hawaii의 `env.sh`에 아래 한 줄을 추가한다. 이 작업 공
 ```
 RPENT_PRIMITIVE_VIDEO_DIR=/data/yunji/latent-planner-work/outputs/primitive_videos
 ```
+
+- env.sh의 모든 변수는 export로 선언한다. 빠진 줄은 `export RPENT_PRIMITIVE_VIDEO_DIR=/data/yunji/latent-planner-work/outputs/primitive_videos`
+- --output-dir는 에피소드마다 고유 경로 outputs/{run_id}/{suite}/task_{task:02d}/seed_{seed:03d}/attempt_{attempt:02d}/ 를 넘긴다. 같은 폴더를 재사용하면 결과가 섞인다.

@@ -14,10 +14,10 @@ Teacher 실행 기록(trace)을 수집하는 인프라만 만든다. 모델 학�
 - 데이터 분리: teacher 수집은 initial state 11~44, 평가는 1~10 (AgenticRoboRL과 동일)
 
 ## 규칙
-- 기존 RPent / AgenticRoboRL 동작을 바꾸지 않는다. 로깅은 config 플래그로 켜고 끄는 래퍼로 추가한다.
+- 기존 RPent / AgenticRoboRL 동작을 바꾸지 않는다. trace는 RPent 출력 파일을 src/trace 변환기로 바꿔서 만든다. RPent 수정이 꼭 필요하면 collect 브랜치에서 기본 동작이 같도록 최소한으로 한다.
 - 존재가 확인되지 않은 API는 쓰지 않는다. 확실하지 않으면 코드를 쓰기 전에 "확인 필요"라고 말한다.
 - 실패 에피소드도 반드시 저장한다.
-- 실행은 공용 GPU 서버에서 한다. sudo, 시스템 패키지 설치, 홈 디렉토리 밖 파일 수정 금지.
+- 실행은 공용 GPU 서버에서 한다. sudo, 시스템 패키지 설치 금지. hawaii에서는 /data/yunji/latent-planner-work/ 안에서만 파일을 만들고 수정한다. 홈(/)은 디스크가 거의 차 있어서 쓰지 않는다. /tmp도 공용이라 쓰지 않는다.
 - GPU는 CUDA_VISIBLE_DEVICES로 지정된 것만 사용한다.
 - 30분 이상 걸리는 실행은 직접 돌리지 말고 tmux로 실행하는 스크립트만 만든다.
 - 각 단계 시작 전 git commit 상태를 확인한다.
