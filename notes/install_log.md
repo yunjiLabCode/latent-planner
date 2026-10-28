@@ -91,3 +91,25 @@ RPENT_PRIMITIVE_VIDEO_DIR=/data/yunji/latent-planner-work/outputs/primitive_vide
 단계 2 EGL 렌더 확인에서는 렌더링 중에 `nvidia-smi`를 실행하고, 프로세스가 어느 GPU에 있는지 기록한다. GPU 3이면 `MUJOCO_EGL_DEVICE_ID`를 바꿔 프로세스가 GPU 2에 있을 때까지 반복한다.
 
 단계 2는 시작하지 않음.
+
+## 단계 2 — 환경과 EGL 렌더 (2026-10-28)
+
+완료. 단계 3은 시작하지 않음. Hawaii 파일은 고치지 않았다.
+
+### 환경
+
+`RPENT_ENV`는 `/data/yunji/latent-planner-work/envs/rpent`이다. torch는 `2.7.1+cu128`.
+
+에셋은 `/data` HF 캐시 아래에 있다.
+
+환경 서버가 import하므로 `omegaconf`와 `rpent-rlinf==0.3.0`을 `--no-deps`로 설치했다.
+
+### EGL 렌더
+
+렌더는 `MUJOCO_EGL_DEVICE_ID=2`와 `CUDA_VISIBLE_DEVICES=2`를 썼다. `nvidia-smi`에서 python은 GPU 2에만 있었다.
+
+이미지: `/data/yunji/latent-planner-work/outputs/libero_pro_reset.png`.
+
+`/tmp/primitive_videos`는 없다. 새 primitive 영상도 없다. `~/.libero`와 `~/.liberopro`도 없다.
+
+전체 실행 로그: `/data/yunji/latent-planner-work/logs/install_log.md`.
