@@ -69,7 +69,7 @@ prompt 토큰 합 1632978. 지연 합 1126.34 s.
 
 ## 영상
 
-`RPENT_PRIMITIVE_VIDEO_DIR` `/data/yunji/latent-planner-work/outputs/primitive_videos`는 설정되어 상속됐으나 비어 있다. env 서버는 `video_cfg`를 저장하고 `RecordVideo.flush_video`는 호출하지 않는다. 에이전트 쪽 `episode.mp4`는 imageio에 ffmpeg/pyav 백엔드가 없어 실패했다. 남은 mp4는 없다. `/tmp/primitive_videos`는 만들어지지 않았다. 실행 전 스냅샷 대비 `/tmp` 새 경로 0, `/home/yunji` 증가 0. 이번 실행의 `TMPDIR`과 `HOME`은 `/data/yunji/latent-planner-work` 아래였다.
+`RPENT_PRIMITIVE_VIDEO_DIR` `/data/yunji/latent-planner-work/outputs/primitive_videos`는 설정되어 상속됐으나 비어 있다. env 서버는 `video_cfg`를 저장하고 `RecordVideo.flush_video`는 호출하지 않는다. 에이전트 쪽 `episode.mp4`는 imageio에 ffmpeg/pyav 백엔드가 없어 실패했다. imageio 2.38.1의 FFMPEG 플러그인은 `imageio_ffmpeg`를 import하는데 그 패키지는 없고, `imageio-ffmpeg`는 설치하지 않았다. 남은 mp4는 없다. `/tmp/primitive_videos`는 만들어지지 않았다. 실행 전 스냅샷 대비 `/tmp` 새 경로 0, `/home/yunji` 증가 0. 이번 실행의 `TMPDIR`과 `HOME`은 `/data/yunji/latent-planner-work` 아래였다.
 
 ## 수집 규모
 
@@ -80,3 +80,50 @@ prompt 토큰 합 1632978. 지연 합 1126.34 s.
 - GPU 2 피크 17320 MiB / 24576 MiB. 풀 스택 둘이면 34640 MiB라서 한 번에 env 세트 1개. 피크 때 여유 7256 MiB.
 
 이 에피소드는 `pi0_pick` 한 번으로 성공했고 recovery는 없다. 더 어려운 task는 더 길다. 지연은 컨텍스트 길이에 단조가 아니다.
+
+## 출력 토큰
+
+stage5 serve 로그에는 요청별 출력 수와 reasoning 분리가 없다. `thinking_token_budget=None`. 수는 `vllm:request_generation_tokens` 델타다. 합 27051.
+
+r(output, latency)=0.960. r(prompt, latency)=0.018. r(output, prompt)=-0.032. prompt 길이는 위 컨텍스트 표와 같다.
+
+가장 느린 턴이 출력도 가장 길다. 턴 15는 7862 tok, 222.06 s. 턴 16은 3304 tok, 92.42 s. 턴 21은 2070 tok, 91.47 s. 턴 10은 2758 tok, 71.58 s. 이 네 턴은 0.026–0.044 s/token이다. 출력 300 토큰 미만인데도 25–38 s가 남은 턴이 있다. 턴 17 (183, 26.66), 18 (192, 25.56), 19 (288, 29.65), 25 (187, 28.22), 26 (225, 37.59), 29 (166, 30.10).
+
+| 턴 | 출력 토큰 | e2e (s) |
+|---:|---:|---:|
+| 1 | 119 | 8.86 |
+| 2 | 62 | 12.28 |
+| 3 | 52 | 13.31 |
+| 4 | 55 | 7.36 |
+| 5 | 1272 | 65.50 |
+| 6 | 108 | 5.04 |
+| 7 | 94 | 4.17 |
+| 8 | 646 | 17.30 |
+| 9 | 119 | 4.47 |
+| 10 | 2758 | 71.58 |
+| 11 | 159 | 10.91 |
+| 12 | 384 | 14.16 |
+| 13 | 329 | 9.96 |
+| 14 | 477 | 14.22 |
+| 15 | 7862 | 222.06 |
+| 16 | 3304 | 92.42 |
+| 17 | 183 | 26.66 |
+| 18 | 192 | 25.56 |
+| 19 | 288 | 29.65 |
+| 20 | 847 | 43.17 |
+| 21 | 2070 | 91.47 |
+| 22 | 1680 | 50.41 |
+| 23 | 397 | 34.82 |
+| 24 | 305 | 32.34 |
+| 25 | 187 | 28.22 |
+| 26 | 225 | 37.59 |
+| 27 | 995 | 31.86 |
+| 28 | 160 | 6.49 |
+| 29 | 166 | 30.10 |
+| 30 | 466 | 41.14 |
+| 31 | 125 | 5.97 |
+| 32 | 89 | 3.69 |
+| 33 | 148 | 5.87 |
+| 34 | 89 | 5.31 |
+| 35 | 324 | 11.17 |
+| 36 | 315 | 11.25 |
