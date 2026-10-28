@@ -37,3 +37,11 @@ proxy는 쓰지 않는다. 평가 경로(`eval.direct`)에서는 안 켜지고, 
 - 스텝 폴더: `agentview.png`, `wrist.png`, depth, 메타데이터
 
 결정: teacher를 돌린 뒤 이 파일들을 우리 스키마로 변환하는 스크립트를 먼저 만든다. 원본 RPent는 수정하지 않는다. 빠지는 것은 결정당 지연 시간과 `sim_state`다.
+
+## 5. 수집은 pi0.5 bf16을 유지한다
+
+2026-10-28. 측정은 `notes/pi05_fp16_check.md`에 둔다.
+
+pi0.5 predict는 bf16 평균 0.84초, fp16 래퍼는 0.34초다. 병목은 플래너일 가능성이 커서 이 VLA 간격이 수집 시간에 크게 작용하지 않을 수 있다. fp16 래퍼는 RPent를 바꾸고 frozen-VLA와 충돌한다. HarnessVLA와 AgenticRoboRL 수치는 bf16이다. action 차이는 0.87%라 폐루프에서 쌓일 수 있다.
+
+결정: 수집 dtype은 bf16으로 둔다. fp16 래퍼는 쓰지 않는다. 단계 5에서 VLA가 에피소드 시간의 대부분임이 보일 때만 다시 본다.
