@@ -21,3 +21,6 @@ Teacher 실행 기록(trace)을 수집하는 인프라만 만든다. 모델 학�
 - GPU는 CUDA_VISIBLE_DEVICES로 지정된 것만 사용한다.
 - 30분 이상 걸리는 실행은 직접 돌리지 말고 tmux로 실행하는 스크립트만 만든다.
 - 각 단계 시작 전 git commit 상태를 확인한다.
+- 코드 수정, 커밋, push는 이 작업 공간에서만 한다.
+- hawaii는 실행 전용이다. hawaii에서 코드를 수정하거나 커밋, push하지 않는다. hawaii는 읽기 전용 토큰으로 clone/pull만 한다.
+- 실행 결과와 로그는 hawaii의 /data/yunji/latent-planner-work/ 에만 둔다.
