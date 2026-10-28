@@ -122,7 +122,7 @@ freeze: `notes/env/rpent_env_freeze.txt`. Hawaii 원본은 `/data/yunji/latent-p
 ### 가중치
 
 - π0.5: `RLinf/RLinf-Pi05-LIBERO-130-fullshot-SFT`. 추론은 `model.safetensors` (약 7.0 GiB). `optimizer.pt`는 받지 않음.
-- SAM3: Hugging Face `facebook/sam3`는 게이트라 HTTP 401. README가 가리키는 ModelScope `facebook/sam3`의 `sam3.pt` (약 3.2 GiB)를 HF 캐시 `models--facebook--sam3` 아래에 둠.
+- SAM3: Hugging Face `facebook/sam3`는 게이트라 HTTP 401. `sam3.pt` (3,450,062,241 bytes)는 ModelScope `https://www.modelscope.cn/models/facebook/sam3/resolve/master/sam3.pt`. sha256 `9999e2341ceef5e136daa386eecb55cb414446a00ac2b55eb2dfd2f7c3cf8c9e`. HF 캐시 `models--facebook--sam3` 아래에 둠.
 
 ### dtype
 
