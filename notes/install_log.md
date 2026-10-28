@@ -81,3 +81,13 @@ RPENT_PRIMITIVE_VIDEO_DIR=/data/yunji/latent-planner-work/outputs/primitive_vide
 
 - env.sh의 모든 변수는 export로 선언한다. 빠진 줄은 `export RPENT_PRIMITIVE_VIDEO_DIR=/data/yunji/latent-planner-work/outputs/primitive_videos`
 - --output-dir는 에피소드마다 고유 경로 outputs/{run_id}/{suite}/task_{task:02d}/seed_{seed:03d}/attempt_{attempt:02d}/ 를 넘긴다. 같은 폴더를 재사용하면 결과가 섞인다.
+
+## GPU — CUDA_VISIBLE_DEVICES (2026-10-28)
+
+`CUDA_VISIBLE_DEVICES`는 `env.sh`에 두지 않는다. vLLM은 GPU 0, 1을 쓰고, pi0.5와 SAM3는 GPU 2를 쓴다.
+
+단계 2부터의 모든 실행 스크립트는 `CUDA_VISIBLE_DEVICES`가 비어 있거나 `3`을 포함하면 exit 1로 끝낸다.
+
+단계 2 EGL 렌더 확인에서는 렌더링 중에 `nvidia-smi`를 실행하고, 프로세스가 어느 GPU에 있는지 기록한다. GPU 3이면 `MUJOCO_EGL_DEVICE_ID`를 바꿔 프로세스가 GPU 2에 있을 때까지 반복한다.
+
+단계 2는 시작하지 않음.
