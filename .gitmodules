@@ -1,0 +1,6 @@
+[submodule "RPent"]
+	path = RPent
+	url = https://github.com/yunjiLabCode/RPent.git
+[submodule "AgenticRoboRL"]
+	path = AgenticRoboRL
+	url = https://github.com/yunjiLabCode/AgenticRoboRL.git
