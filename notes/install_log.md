@@ -115,6 +115,32 @@ freeze: `notes/env/rpent_env_freeze.txt`. Hawaii 원본은 `/data/yunji/latent-p
 
 `is_bf16_supported()` 기본값은 `True`(에뮬레이션 포함). `including_emulation=False`는 `False`라서 하드웨어 bf16은 없다. 1024 matmul은 bf16 0.412 ms, fp16 0.041 ms, 비율 약 9.97이다. torch `2.7.1+cu128`.
 
+## 단계 3 — π0.5와 SAM3 (2026-10-28)
+
+완료. 단계 4는 시작하지 않음. GPU 3은 쓰지 않음. Hawaii 상세 로그는 `/data/yunji/latent-planner-work/logs/install_log.md`.
+
+### 가중치
+
+- π0.5: `RLinf/RLinf-Pi05-LIBERO-130-fullshot-SFT`. 추론은 `model.safetensors` (약 7.0 GiB). `optimizer.pt`는 받지 않음.
+- SAM3: Hugging Face `facebook/sam3`는 게이트라 HTTP 401. README가 가리키는 ModelScope `facebook/sam3`의 `sam3.pt` (약 3.2 GiB)를 HF 캐시 `models--facebook--sam3` 아래에 둠.
+
+### dtype
+
+- π0.5: 파라미터 대부분 `torch.bfloat16` (3,497,036,912), 일부 `float32` (119,720,608).
+- SAM3: 파라미터 860,055,224개 전부 `float32`. segment 내부는 autocast bfloat16.
+- bf16 경고나 에러는 없음. `TRANSFORMERS_CACHE` deprecated, `torch_dtype` deprecated 경고는 있음.
+
+### GPU 2 메모리 (TITAN RTX 24576 MiB)
+
+- π0.5만: nvidia-smi 7342 MiB used, 16683 free.
+- 둘 다: torch allocated 10578 MiB. nvidia-smi 10896 used, 13129 free.
+- env 서버까지: 16679 used, 7346 free. 렌더 프로세스는 GPU 2만. GPU 3은 기존 Xorg뿐.
+
+### 시간
+
+- π0.5 predict 한 번: 2.514 s. action shape `(1, 5, 7)`.
+- SAM3 segment 한 번: 3.416 s. prompt `"the robot arm"`, found, score 0.559.
+
 ### EGL 렌더
 
 렌더는 `MUJOCO_EGL_DEVICE_ID=2`와 `CUDA_VISIBLE_DEVICES=2`를 썼다. `nvidia-smi`에서 python은 GPU 2에만 있었다.
