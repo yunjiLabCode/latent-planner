@@ -1,4 +1,4 @@
-"""Convert one RPent output directory into trace schema v0.2.
+"""Convert one RPent output directory into trace schema v0.2.1.
 
 Reads ``states.json`` and ``transcript_*.json`` written by RPent ``f70d720``
 plus ``AgenticRoboRL/patches/rpent/rpent_f70d720.patch``. Does not read images

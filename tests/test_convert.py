@@ -90,6 +90,7 @@ class FixtureTests(unittest.TestCase):
                         "end_decision": 2,
                         "n_attempts": 2,
                         "resolved": True,
+                        "closed_by": "success",
                     }
                 ],
             )
@@ -126,6 +127,7 @@ class FixtureTests(unittest.TestCase):
                         "end_decision": 0,
                         "n_attempts": 1,
                         "resolved": False,
+                        "closed_by": "episode_end",
                     }
                 ],
             )
@@ -345,6 +347,7 @@ class RoleTests(unittest.TestCase):
         self.assertIs(episode["recovery_episodes"][0]["resolved"], True)
         self.assertEqual(episode["recovery_episodes"][0]["n_attempts"], 1)
         self.assertEqual(episode["recovery_episodes"][0]["end_decision"], 1)
+        self.assertEqual(episode["recovery_episodes"][0]["closed_by"], "recovery")
 
     def test_open_failure_is_unresolved(self) -> None:
         episode, decisions = self._run([_pick(False)])
@@ -358,11 +361,127 @@ class RoleTests(unittest.TestCase):
                     "failed_primitive": "pi0_pick",
                     "start_decision": 0,
                     "end_decision": 0,
+                        "n_attempts": 1,
+                        "resolved": False,
+                        "closed_by": "episode_end",
+                    }
+                ],
+            )
+
+    def test_different_prompt_is_recovery(self) -> None:
+        episode, decisions = self._run(
+            [
+                ("pi0_pick", {"prompt": "bowl"}, {"name": "pick", "success": False}),
+                ("pi0_pick", {"prompt": "plate"}, {"name": "pick", "success": True}),
+            ]
+        )
+        self.assertEqual([row["labels"]["role"] for row in decisions], ["new", "recovery"])
+        self.assertEqual([row["labels"]["type"] for row in decisions], ["new", "recovery"])
+        self.assertEqual(
+            [row["labels"]["recovery_episode_id"] for row in decisions],
+            [1, 1],
+        )
+        self.assertEqual(
+            episode["recovery_episodes"],
+            [
+                {
+                    "id": 1,
+                    "failed_primitive": "pi0_pick",
+                    "start_decision": 0,
+                    "end_decision": 1,
                     "n_attempts": 1,
-                    "resolved": False,
+                    "resolved": True,
+                    "closed_by": "recovery",
                 }
             ],
         )
+
+    def test_failed_recovery_opens_a_new_episode(self) -> None:
+        episode, decisions = self._run(
+            [
+                ("pi0_pick", {"prompt": "bowl"}, {"name": "pick", "success": False}),
+                ("pi0_pick", {"prompt": "plate"}, {"name": "pick", "success": False}),
+                ("pi0_pick", {"prompt": "plate"}, {"name": "pick", "success": True}),
+            ]
+        )
+        self.assertEqual(
+            [row["labels"]["role"] for row in decisions],
+            ["new", "recovery", "retry"],
+        )
+        self.assertEqual(
+            [row["labels"]["recovery_episode_id"] for row in decisions],
+            [1, 2, 2],
+        )
+        self.assertEqual(
+            episode["recovery_episodes"],
+            [
+                {
+                    "id": 1,
+                    "failed_primitive": "pi0_pick",
+                    "start_decision": 0,
+                    "end_decision": 1,
+                    "n_attempts": 1,
+                    "resolved": True,
+                    "closed_by": "recovery",
+                },
+                {
+                    "id": 2,
+                    "failed_primitive": "pi0_pick",
+                    "start_decision": 1,
+                    "end_decision": 2,
+                    "n_attempts": 2,
+                    "resolved": True,
+                    "closed_by": "success",
+                },
+            ],
+        )
+
+    def test_relabel_recomputes_recovery_episodes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            original, _decisions = _convert_commands(
+                root,
+                [
+                    ("pi0_pick", {"prompt": "bowl"}, {"name": "pick", "success": False}),
+                    ("pi0_pick", {"prompt": "plate"}, {"name": "pick", "success": False}),
+                    ("pi0_pick", {"prompt": "plate"}, {"name": "pick", "success": True}),
+                ],
+            )
+            out = root / "traces" / "run" / "ep"
+            path = out / "decisions.jsonl"
+            records = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+            records[1]["labels"]["role"] = "retry"
+            records[1]["labels"]["type"] = "retry"
+            records[1]["labels"]["recovery_episode_id"] = 1
+            records[1]["labels"]["primitive_success"] = True
+            path.write_text("".join(json.dumps(row) + "\n" for row in records))
+            stored = json.loads((out / "episode.json").read_text())
+            stored["recovery_episodes"] = [{"id": 9, "resolved": False}]
+            (out / "episode.json").write_text(json.dumps(stored, indent=2, ensure_ascii=False) + "\n")
+            relabel(path)
+            episode, decisions = _load(out)
+            self.assertIs(decisions[1]["labels"]["primitive_success"], True)
+            self.assertEqual(
+                [row["labels"]["role"] for row in decisions],
+                ["new", "recovery", "retry"],
+            )
+            self.assertEqual(
+                [row["labels"]["recovery_episode_id"] for row in decisions],
+                [1, 2, 2],
+            )
+            self.assertEqual(episode["recovery_episodes"], original["recovery_episodes"])
+            labeled_ids = [row["labels"]["recovery_episode_id"] for row in decisions]
+            self.assertEqual(
+                [row["id"] for row in episode["recovery_episodes"]],
+                sorted(set(labeled_ids)),
+            )
+            unchanged = {
+                key: value for key, value in episode.items() if key != "recovery_episodes"
+            }
+            original_rest = {
+                key: value for key, value in original.items() if key != "recovery_episodes"
+            }
+            self.assertEqual(unchanged, original_rest)
 
 
 if __name__ == "__main__":

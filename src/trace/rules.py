@@ -1,4 +1,4 @@
-"""Primitive success and decision labels for trace schema v0.2.
+"""Primitive success and decision labels for trace schema v0.2.1.
 
 Targets RPent ``f70d720`` (``robots/libero/tools.py``). The AgenticRoboRL
 patch does not change these function bodies.
@@ -40,6 +40,30 @@ ROLE_RETRY = "retry"
 ROLE_RESTAGE = "restage"
 ROLE_RESTAGE_RETRY = "restage_retry"
 ROLE_RECOVERY = "recovery"
+
+# Same name is not the same attempt when the VLA prompt differs.
+PROMPT_ATTEMPT_PRIMITIVES = frozenset({"pi0_pick", "pi0_doubled"})
+
+CLOSED_BY_SUCCESS = "success"
+CLOSED_BY_RECOVERY = "recovery"
+CLOSED_BY_EPISODE_END = "episode_end"
+
+
+def same_attempt(a: Mapping[str, Any], b: Mapping[str, Any]) -> bool:
+    """Whether ``b`` continues the attempt started by ``a``.
+
+    ``pi0_pick`` and ``pi0_doubled`` match only when the primitive name and
+    ``arguments.prompt`` are both equal. Every other primitive matches by name.
+    """
+    name_a = str(a.get("primitive") or "")
+    name_b = str(b.get("primitive") or "")
+    if name_a != name_b:
+        return False
+    if name_a in PROMPT_ATTEMPT_PRIMITIVES:
+        prompt_a = (a.get("arguments") or {}).get("prompt")
+        prompt_b = (b.get("arguments") or {}).get("prompt")
+        return prompt_a == prompt_b
+    return True
 
 
 def primitive_success(
@@ -129,7 +153,28 @@ def _success_of(record: Mapping[str, Any]) -> bool | None:
     )
 
 
-def _closed_episode(open_episode: dict[str, Any], *, resolved: bool) -> dict[str, Any]:
+def _anchor(record: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "primitive": str(record.get("primitive") or ""),
+        "arguments": dict(record.get("arguments") or {}),
+    }
+
+
+def _open_episode(record: Mapping[str, Any], index: int, episode_id: int) -> dict[str, Any]:
+    return {
+        "id": episode_id,
+        "failed_primitive": str(record.get("primitive") or ""),
+        "anchor": _anchor(record),
+        "start_decision": index,
+        "end_decision": index,
+        "n_attempts": 1,
+        "saw_staging": False,
+    }
+
+
+def _closed_episode(
+    open_episode: dict[str, Any], *, resolved: bool, closed_by: str
+) -> dict[str, Any]:
     return {
         "id": open_episode["id"],
         "failed_primitive": open_episode["failed_primitive"],
@@ -137,6 +182,7 @@ def _closed_episode(open_episode: dict[str, Any], *, resolved: bool) -> dict[str
         "end_decision": open_episode["end_decision"],
         "n_attempts": open_episode["n_attempts"],
         "resolved": resolved,
+        "closed_by": closed_by,
     }
 
 
@@ -148,14 +194,18 @@ def classify_labels(
     A failure is ``primitive_success is False``. None does not open or extend
     one. While a failure is open:
 
-    - the same primitive with no staging since the previous attempt is ``retry``
+    - :func:`same_attempt` with no staging since the previous attempt is ``retry``
     - a ``STAGING`` primitive is ``restage``
-    - the failed primitive after staging is ``restage_retry``
-    - any other primitive is ``recovery`` and handles the failure
+    - the same attempt after staging is ``restage_retry``
+    - any other primitive is ``recovery`` and closes the failure
 
-    A successful retry or restage_retry handles the failure. Another failure
-    on that retry keeps the same id. An episode still open after the last
-    decision is unresolved. Ids start at 1.
+    A different ``pi0_pick`` / ``pi0_doubled`` prompt is not the same attempt,
+    so it is ``recovery`` and does not increment ``n_attempts``. A successful
+    retry or restage_retry closes with ``closed_by`` ``success``. A recovery
+    closes with ``closed_by`` ``recovery``. If that recovery decision itself
+    has ``primitive_success is False``, a new episode starts on the same
+    decision and the decision's id is the new one. An episode still open
+    after the last decision has ``closed_by`` ``episode_end``. Ids start at 1.
     """
     roles: list[dict[str, Any]] = []
     episodes: list[dict[str, Any]] = []
@@ -172,22 +222,19 @@ def classify_labels(
             if failed:
                 episode_id = next_id
                 next_id += 1
-                open_episode = {
-                    "id": episode_id,
-                    "failed_primitive": primitive,
-                    "start_decision": index,
-                    "end_decision": index,
-                    "n_attempts": 1,
-                    "saw_staging": False,
-                }
-        elif primitive == open_episode["failed_primitive"]:
+                open_episode = _open_episode(record, index, episode_id)
+        elif same_attempt(open_episode["anchor"], record):
             role = ROLE_RESTAGE_RETRY if open_episode["saw_staging"] else ROLE_RETRY
             episode_id = open_episode["id"]
             open_episode["n_attempts"] += 1
             open_episode["end_decision"] = index
             open_episode["saw_staging"] = False
             if success is True:
-                episodes.append(_closed_episode(open_episode, resolved=True))
+                episodes.append(
+                    _closed_episode(
+                        open_episode, resolved=True, closed_by=CLOSED_BY_SUCCESS
+                    )
+                )
                 open_episode = None
         elif primitive in STAGING:
             role = ROLE_RESTAGE
@@ -196,14 +243,27 @@ def classify_labels(
             open_episode["end_decision"] = index
         else:
             role = ROLE_RECOVERY
-            episode_id = open_episode["id"]
             open_episode["end_decision"] = index
-            episodes.append(_closed_episode(open_episode, resolved=True))
-            open_episode = None
+            episodes.append(
+                _closed_episode(
+                    open_episode, resolved=True, closed_by=CLOSED_BY_RECOVERY
+                )
+            )
+            if failed:
+                episode_id = next_id
+                next_id += 1
+                open_episode = _open_episode(record, index, episode_id)
+            else:
+                episode_id = open_episode["id"]
+                open_episode = None
         roles.append({"role": role, "recovery_episode_id": episode_id})
 
     if open_episode is not None:
-        episodes.append(_closed_episode(open_episode, resolved=False))
+        episodes.append(
+            _closed_episode(
+                open_episode, resolved=False, closed_by=CLOSED_BY_EPISODE_END
+            )
+        )
     return roles, episodes
 
 

@@ -1,7 +1,7 @@
-"""Pydantic models for trace schema v0.2.
+"""Pydantic models for trace schema v0.2.1.
 
-Matching, outcome, and observation paths are unchanged from v0.1.
-Label rules are documented in ``notes/trace_schema_v0.2.md``.
+Matching, outcome, observation paths, and primitive success are unchanged.
+Label rules are documented in ``notes/trace_schema_v0.2.1.md``.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA_VERSION: Literal["0.2"] = "0.2"
+SCHEMA_VERSION: Literal["0.2.1"] = "0.2.1"
 
 
 class ObsBefore(BaseModel):
@@ -55,6 +55,7 @@ class RecoveryEpisode(BaseModel):
     end_decision: int
     n_attempts: int
     resolved: bool
+    closed_by: Literal["success", "recovery", "episode_end"]
 
 
 class Decision(BaseModel):
@@ -103,7 +104,7 @@ class EpisodeStats(BaseModel):
 class Episode(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    schema_version: Literal["0.2"] = SCHEMA_VERSION
+    schema_version: Literal["0.2.1"] = SCHEMA_VERSION
     run_id: str
     episode_id: str
     source: dict[str, Any]
