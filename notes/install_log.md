@@ -102,7 +102,18 @@ RPENT_PRIMITIVE_VIDEO_DIR=/data/yunji/latent-planner-work/outputs/primitive_vide
 
 에셋은 `/data` HF 캐시 아래에 있다.
 
-환경 서버가 import하므로 `omegaconf`와 `rpent-rlinf==0.3.0`을 `--no-deps`로 설치했다.
+환경 서버가 import하므로 두 패키지를 추가했다. collect의 `libero-pro` extra에는 없다.
+
+- `omegaconf==2.3.1`. `pip install 'omegaconf>=2.3,<2.4'`라서 `--no-deps`가 아니다. `antlr4-python3-runtime==4.9.3`도 같이 설치됐다.
+- `rpent-rlinf==0.3.0`만 `pip install --no-deps`다. `ray`, `wandb`, `liger`는 freeze에 없다.
+
+freeze: `notes/env/rpent_env_freeze.txt`. Hawaii 원본은 `/data/yunji/latent-planner-work/logs/rpent_env_freeze.txt` (2026-10-28T16:27:15+09:00).
+
+### GPU 2 bf16 (단계 3 전)
+
+`CUDA_VISIBLE_DEVICES=2`. TITAN RTX, `get_device_capability()` `(7, 5)`. `get_arch_list()`에 `sm_75`가 있다.
+
+`is_bf16_supported()` 기본값은 `True`(에뮬레이션 포함). `including_emulation=False`는 `False`라서 하드웨어 bf16은 없다. 1024 matmul은 bf16 0.412 ms, fp16 0.041 ms, 비율 약 9.97이다. torch `2.7.1+cu128`.
 
 ### EGL 렌더
 

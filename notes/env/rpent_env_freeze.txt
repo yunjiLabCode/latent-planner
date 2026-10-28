@@ -1,0 +1,322 @@
+# conda list
+# prefix: /data/yunji/latent-planner-work/envs/rpent
+# captured: 2026-10-28T16:27:15+09:00
+
+# packages in environment at /data/yunji/latent-planner-work/envs/rpent:
+#
+# Name Version Build Channel
+_openmp_mutex 4.5 20_gnu conda-forge
+absl-py 2.5.1 pypi_0 pypi
+annotated-doc 0.0.5 pypi_0 pypi
+annotated-types 0.8.0 pypi_0 pypi
+anthropic 2.3.0 pypi_0 pypi
+antlr4-python3-runtime 4.9.3 pypi_0 pypi
+anyio 4.15.1 pypi_0 pypi
+attrs 26.1.0 pypi_0 pypi
+bddl 3.6.0 pypi_0 pypi
+bzip2 1.0.8 hda65f42_10 conda-forge
+ca-certificates 2026.10.23 hbd8a1cb_0 conda-forge
+certifi 2026.10.23 pypi_0 pypi
+cffi 2.1.1 pypi_0 pypi
+charset-normalizer 3.5.2 pypi_0 pypi
+claude-agent-sdk 0.2.174 pypi_0 pypi
+click 8.5.0 pypi_0 pypi
+cloudpickle 3.1.2 pypi_0 pypi
+contourpy 1.3.3 pypi_0 pypi
+cryptography 50.0.2 pypi_0 pypi
+cycler 0.12.1 pypi_0 pypi
+defusedxml 0.7.1 pypi_0 pypi
+docstring-parser 0.18.0 pypi_0 pypi
+easydict 1.13 pypi_0 pypi
+etils 1.14.0 pypi_0 pypi
+evdev 2.0.0 pypi_0 pypi
+fastapi 0.162.0 pypi_0 pypi
+fastjsonschema 2.22.2 pypi_0 pypi
+filelock 3.32.3 pypi_0 pypi
+fonttools 4.68.0 pypi_0 pypi
+fsspec 2026.7.0 pypi_0 pypi
+future 1.0.0 pypi_0 pypi
+genai-prices 0.1.13 pypi_0 pypi
+glfw 2.11.0 pypi_0 pypi
+griffelib 2.4.1 pypi_0 pypi
+gym 0.26.2 pypi_0 pypi
+gym-notices 0.1.0 pypi_0 pypi
+h11 0.16.0 pypi_0 pypi
+h5py 3.16.0 pypi_0 pypi
+hf-xet 1.7.0 pypi_0 pypi
+httpcore 1.0.9 pypi_0 pypi
+httpcore2 2.16.0 pypi_0 pypi
+httpx 0.28.1 pypi_0 pypi
+httpx-sse 0.4.3 pypi_0 pypi
+httpx2 2.16.0 pypi_0 pypi
+huggingface-hub 2.3.0 pypi_0 pypi
+idna 3.20 pypi_0 pypi
+imageio 2.38.1 pypi_0 pypi
+iniconfig 2.3.1 pypi_0 pypi
+jinja2 3.1.6 pypi_0 pypi
+jiter 0.18.0 pypi_0 pypi
+joblib 1.6.0 pypi_0 pypi
+jsonschema 4.26.0 pypi_0 pypi
+jsonschema-specifications 2025.9.1 pypi_0 pypi
+jupyter-core 5.9.1 pypi_0 pypi
+jupytext 1.19.6 pypi_0 pypi
+kiwisolver 1.5.1 pypi_0 pypi
+ld_impl_linux-64 2.46.1 default_hbd61a6d_103 conda-forge
+libexpat 2.9.0 hd2095e1_0 conda-forge
+libffi 3.7.0 h81df57d_1 conda-forge
+libgcc 16.2.0 ha9f2e26_7 conda-forge
+libgomp 16.2.0 he0feb66_7 conda-forge
+liblzma 5.8.3 hb03c661_1 conda-forge
+libnsl 2.0.1 hb9d3cd8_1 conda-forge
+libpython 3.11.18 ha57cdbe_0_cpython conda-forge
+libsqlite 3.54.1 h0737f62_101 conda-forge
+libuuid 2.42.4 hcfc3c73_0 conda-forge
+libxcrypt 4.4.38 h280c20c_0 conda-forge
+libzlib 1.3.2 h25fd6f3_3 conda-forge
+llvmlite 0.50.0 pypi_0 pypi
+logfire-api 5.4.0 pypi_0 pypi
+markdown-it-py 4.2.0 pypi_0 pypi
+markupsafe 3.0.3 pypi_0 pypi
+matplotlib 3.11.2 pypi_0 pypi
+mcp 1.30.0 pypi_0 pypi
+mdit-py-plugins 0.6.1 pypi_0 pypi
+mdurl 0.1.2 pypi_0 pypi
+mink 0.0.5 pypi_0 pypi
+mpmath 1.3.0 pypi_0 pypi
+mujoco 3.3.0 pypi_0 pypi
+nbformat 5.11.1 pypi_0 pypi
+ncurses 6.6 hdb14827_1 conda-forge
+networkx 3.6.1 pypi_0 pypi
+nltk 3.10.4 pypi_0 pypi
+numba 0.68.1 pypi_0 pypi
+numpy 1.26.4 pypi_0 pypi
+nvidia-cublas-cu12 12.8.3.14 pypi_0 pypi
+nvidia-cuda-cupti-cu12 12.8.57 pypi_0 pypi
+nvidia-cuda-nvrtc-cu12 12.8.61 pypi_0 pypi
+nvidia-cuda-runtime-cu12 12.8.57 pypi_0 pypi
+nvidia-cudnn-cu12 9.7.1.26 pypi_0 pypi
+nvidia-cufft-cu12 11.3.3.41 pypi_0 pypi
+nvidia-cufile-cu12 1.13.0.11 pypi_0 pypi
+nvidia-curand-cu12 10.3.9.55 pypi_0 pypi
+nvidia-cusolver-cu12 11.7.2.55 pypi_0 pypi
+nvidia-cusparse-cu12 12.5.7.53 pypi_0 pypi
+nvidia-cusparselt-cu12 0.6.3 pypi_0 pypi
+nvidia-nccl-cu12 2.26.2 pypi_0 pypi
+nvidia-nvjitlink-cu12 12.8.61 pypi_0 pypi
+nvidia-nvtx-cu12 12.8.55 pypi_0 pypi
+omegaconf 2.3.1 pypi_0 pypi
+openai 3.40.0 pypi_0 pypi
+openai-codex 0.163.0 pypi_0 pypi
+openai-codex-cli-bin 0.163.0 pypi_0 pypi
+opencv-python 4.11.0.86 pypi_0 pypi
+openssl 3.6.5 h781a0a9_0 conda-forge
+opentelemetry-api 1.45.1 pypi_0 pypi
+packaging 26.3 pyhc364b38_0 conda-forge
+pillow 12.3.0 pypi_0 pypi
+pip 26.2.2 pyh8b19718_0 conda-forge
+platformdirs 4.13.7 pypi_0 pypi
+pluggy 1.7.0 pypi_0 pypi
+prompt-toolkit 3.0.53 pypi_0 pypi
+pycparser 3.12 pypi_0 pypi
+pydantic 2.14.1 pypi_0 pypi
+pydantic-ai-slim 2.63.0 pypi_0 pypi
+pydantic-core 2.50.1 pypi_0 pypi
+pydantic-graph 2.63.0 pypi_0 pypi
+pydantic-settings 2.16.1 pypi_0 pypi
+pygments 2.21.0 pypi_0 pypi
+pyjwt 2.15.1 pypi_0 pypi
+pynput 1.8.2 pypi_0 pypi
+pyopengl 3.1.10 pypi_0 pypi
+pyparsing 3.3.3 pypi_0 pypi
+pytest 9.2.0 pypi_0 pypi
+python 3.11.18 h5f976f7_0_cpython conda-forge
+python-dateutil 3.0.0 pypi_0 pypi
+python-dotenv 1.2.4 pypi_0 pypi
+python-multipart 0.0.32 pypi_0 pypi
+python-xlib 0.33 pypi_0 pypi
+pyyaml 6.0.3 pypi_0 pypi
+qpsolvers 4.13.0 pypi_0 pypi
+quadprog 0.1.14 pypi_0 pypi
+readline 8.3 hd6e31c0_1 conda-forge
+referencing 0.37.0 pypi_0 pypi
+regex 2026.9.29 pypi_0 pypi
+requests 2.34.2 pypi_0 pypi
+robosuite 1.5.2 pypi_0 pypi
+rpds-py 2026.9.1 pypi_0 pypi
+rpent 0.0.0 pypi_0 pypi
+rpent-libero 0.2.0 pypi_0 pypi
+rpent-liberopro 0.2.0 pypi_0 pypi
+rpent-rlinf 0.3.0 pypi_0 pypi
+scipy 1.17.1 pypi_0 pypi
+setuptools 84.2.1 pyhe730653_0 conda-forge
+six 1.17.0 pypi_0 pypi
+sniffio 1.3.1 pypi_0 pypi
+sse-starlette 3.6.0 pypi_0 pypi
+starlette 1.10.0 pypi_0 pypi
+sympy 1.14.0 pypi_0 pypi
+termcolor 3.3.0 pypi_0 pypi
+tiktoken 0.14.0 pypi_0 pypi
+tk 8.6.13 noxft_h1df4ec4_4 conda-forge
+torch 2.7.1+cu128 pypi_0 pypi
+torchvision 0.22.1+cu128 pypi_0 pypi
+tqdm 4.70.1 pypi_0 pypi
+traitlets 5.16.1 pypi_0 pypi
+triton 3.3.1 pypi_0 pypi
+truststore 0.10.5 pypi_0 pypi
+typing-extensions 4.16.0 pypi_0 pypi
+typing-inspection 0.4.4 pypi_0 pypi
+tzdata 2026.5 pypi_0 pypi
+urllib3 2.8.0 pypi_0 pypi
+uvicorn 0.54.0 pypi_0 pypi
+wcwidth 0.9.4 pypi_0 pypi
+wheel 0.48.0 pyhd8ed1ab_0 conda-forge
+zipp 4.1.2 pypi_0 pypi
+zstd 1.5.7 hb78ec9c_7 conda-forge
+
+# pip freeze
+# prefix: /data/yunji/latent-planner-work/envs/rpent
+# python: /data/yunji/latent-planner-work/envs/rpent/bin/python
+
+absl-py==2.5.1
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anthropic==2.3.0
+antlr4-python3-runtime==4.9.3
+anyio==4.15.1
+attrs==26.1.0
+bddl==3.6.0
+certifi==2026.10.23
+cffi==2.1.1
+charset-normalizer==3.5.2
+claude-agent-sdk==0.2.174
+click==8.5.0
+cloudpickle==3.1.2
+contourpy==1.3.3
+cryptography==50.0.2
+cycler==0.12.1
+defusedxml==0.7.1
+docstring_parser==0.18.0
+easydict==1.13
+etils==1.14.0
+evdev==2.0.0
+fastapi==0.162.0
+fastjsonschema==2.22.2
+filelock==3.32.3
+fonttools==4.68.0
+fsspec==2026.7.0
+future==1.0.0
+genai-prices==0.1.13
+glfw==2.11.0
+griffelib==2.4.1
+gym==0.26.2
+gym-notices==0.1.0
+h11==0.16.0
+h5py==3.16.0
+hf-xet==1.7.0
+httpcore==1.0.9
+httpcore2==2.16.0
+httpx==0.28.1
+httpx-sse==0.4.3
+httpx2==2.16.0
+huggingface_hub==2.3.0
+idna==3.20
+ImageIO==2.38.1
+iniconfig==2.3.1
+Jinja2==3.1.6
+jiter==0.18.0
+joblib==1.6.0
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+jupyter_core==5.9.1
+jupytext==1.19.6
+kiwisolver==1.5.1
+llvmlite==0.50.0
+logfire-api==5.4.0
+markdown-it-py==4.2.0
+MarkupSafe==3.0.3
+matplotlib==3.11.2
+mcp==1.30.0
+mdit-py-plugins==0.6.1
+mdurl==0.1.2
+mink==0.0.5
+mpmath==1.3.0
+mujoco==3.3.0
+nbformat==5.11.1
+networkx==3.6.1
+nltk==3.10.4
+numba==0.68.1
+numpy==1.26.4
+nvidia-cublas-cu12==12.8.3.14
+nvidia-cuda-cupti-cu12==12.8.57
+nvidia-cuda-nvrtc-cu12==12.8.61
+nvidia-cuda-runtime-cu12==12.8.57
+nvidia-cudnn-cu12==9.7.1.26
+nvidia-cufft-cu12==11.3.3.41
+nvidia-cufile-cu12==1.13.0.11
+nvidia-curand-cu12==10.3.9.55
+nvidia-cusolver-cu12==11.7.2.55
+nvidia-cusparse-cu12==12.5.7.53
+nvidia-cusparselt-cu12==0.6.3
+nvidia-nccl-cu12==2.26.2
+nvidia-nvjitlink-cu12==12.8.61
+nvidia-nvtx-cu12==12.8.55
+omegaconf==2.3.1
+openai==3.40.0
+openai-codex==0.163.0
+openai-codex-cli-bin==0.163.0
+opencv-python==4.11.0.86
+opentelemetry-api==1.45.1
+packaging @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_packaging_1785888127/work
+pillow==12.3.0
+platformdirs==4.13.7
+pluggy==1.7.0
+prompt_toolkit==3.0.53
+pycparser==3.12
+pydantic==2.14.1
+pydantic-ai-slim==2.63.0
+pydantic-graph==2.63.0
+pydantic-settings==2.16.1
+pydantic_core==2.50.1
+Pygments==2.21.0
+PyJWT==2.15.1
+pynput==1.8.2
+PyOpenGL==3.1.10
+pyparsing==3.3.3
+pytest==9.2.0
+python-dateutil==3.0.0
+python-dotenv==1.2.4
+python-multipart==0.0.32
+python-xlib==0.33
+PyYAML==6.0.3
+qpsolvers==4.13.0
+quadprog==0.1.14
+referencing==0.37.0
+regex==2026.9.29
+requests==2.34.2
+robosuite==1.5.2
+rpds-py==2026.9.1
+-e git+https://github.com/yunjiLabCode/RPent.git@50717fadc3ba472c7b6d94dd413acb4847d1cfec#egg=rpent&subdirectory=../../RPent
+rpent-libero==0.2.0
+rpent-liberopro==0.2.0
+rpent-rlinf==0.3.0
+scipy==1.17.1
+six==1.17.0
+sniffio==1.3.1
+sse-starlette==3.6.0
+starlette==1.10.0
+sympy==1.14.0
+termcolor==3.3.0
+tiktoken==0.14.0
+torch==2.7.1+cu128
+torchvision==0.22.1+cu128
+tqdm==4.70.1
+traitlets==5.16.1
+triton==3.3.1
+truststore==0.10.5
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+tzdata==2026.5
+urllib3==2.8.0
+uvicorn==0.54.0
+wcwidth==0.9.4
+zipp==4.1.2
