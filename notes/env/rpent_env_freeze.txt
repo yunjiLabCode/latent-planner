@@ -1,6 +1,7 @@
 # conda list
 # prefix: /data/yunji/latent-planner-work/envs/rpent
 # captured: 2026-10-28T16:27:15+09:00
+# 2026-10-29: imageio-ffmpeg 0.7.0 only. Nothing else upgraded.
 
 # packages in environment at /data/yunji/latent-planner-work/envs/rpent:
 #
@@ -52,6 +53,7 @@ httpx2 2.16.0 pypi_0 pypi
 huggingface-hub 2.3.0 pypi_0 pypi
 idna 3.20 pypi_0 pypi
 imageio 2.38.1 pypi_0 pypi
+imageio-ffmpeg 0.7.0 pypi_0 pypi
 iniconfig 2.3.1 pypi_0 pypi
 jinja2 3.1.6 pypi_0 pypi
 jiter 0.18.0 pypi_0 pypi
@@ -221,6 +223,7 @@ httpx2==2.16.0
 huggingface_hub==2.3.0
 idna==3.20
 ImageIO==2.38.1
+imageio-ffmpeg==0.7.0
 iniconfig==2.3.1
 Jinja2==3.1.6
 jiter==0.18.0
