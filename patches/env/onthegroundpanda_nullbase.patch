@@ -1,0 +1,22 @@
+# OnTheGroundPanda.default_base: return None -> return "NullBase"
+#
+# Same one-line change as:
+#   RLinf/LIBERO     0333053e0f904fb96c592737f9426a2a2579b0bc
+#   RLinf/LIBERO-PRO 730f5628cacd06f755075e27247ad28d5a099433
+#
+# The installed rpent-libero and rpent-liberopro modules are byte-identical
+# at this hunk (both still return None). One hunk applies to both paths:
+#   site-packages/libero/libero/envs/robots/on_the_ground_panda.py
+#   site-packages/liberopro/liberopro/envs/robots/on_the_ground_panda.py
+#
+--- a/on_the_ground_panda.py
++++ b/on_the_ground_panda.py
+@@ -24,7 +24,7 @@ def __init__(self, idn=0):
+ 
+     @property
+     def default_base(self):
+-        return None
++        return "NullBase"
+ 
+     @property
+     def default_gripper(self):

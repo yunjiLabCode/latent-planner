@@ -191,3 +191,58 @@ prefix cache 히트 88.27% (1441440/1632978). 쿼리 수 = prompt 토큰 수. �
 - GPU 2 피크 17320 MiB / 24576 MiB. 풀 스택 둘은 34640 MiB. 한 번에 env 세트 1개. 피크 여유 7256 MiB.
 
 이 에피소드는 `pi0_pick` 1회, recovery 없음. 더 어려운 task는 더 길다. 지연은 컨텍스트 길이에 단조가 아니다.
+
+## OnTheGroundPanda NullBase 패치 (2026-10-29)
+
+적용하지 않았다. batch01이 아직 돌아가는 중이다. site-packages는 고치지 않았고, `scripts/apply_env_patches.sh`와 `scripts/verify_env_suites.sh`도 실행하지 않았다. `CUDA_VISIBLE_DEVICES`는 `env.sh`에 넣지 않는다.
+
+### 파일
+
+`OnTheGroundPanda.default_base`의 `return None`을 `return "NullBase"`로 바꾼다. RLinf/LIBERO `0333053e0f904fb96c592737f9426a2a2579b0bc`, RLinf/LIBERO-PRO `730f5628cacd06f755075e27247ad28d5a099433`. 두 설치 파일은 그 한 줄 앞에서 바이트가 같아서 패치는 헝크 하나다. 적용 대상은 둘이다.
+
+- `rpent-libero`: `$RPENT_ENV/.../site-packages/libero/libero/envs/robots/on_the_ground_panda.py`
+- `rpent-liberopro`: `$RPENT_ENV/.../site-packages/liberopro/liberopro/envs/robots/on_the_ground_panda.py`
+
+패치: `patches/env/onthegroundpanda_nullbase.patch`. 적용: `scripts/apply_env_patches.sh`. 확인: `scripts/verify_env_suites.sh`.
+
+`RPENT_ENV` 기본값은 `/data/yunji/latent-planner-work/envs/rpent`이다. 환경 변수로 바꿀 수 있다.
+
+### dry-run
+
+쓰기는 없다. 바꿀 파일, 적용 전 sha256, 백업 경로, diff를 출력한다.
+
+```bash
+ROOT=/data/yunji/latent-planner-work bash scripts/apply_env_patches.sh --dry-run
+```
+
+`rpent` 또는 `env_server` 프로세스가 있으면 경고를 내고 패치하지 않는다. `--dry-run`이어도 그 경우 종료 코드는 1이고, 설치된 파일, 백업, 로그를 쓰지 않는다.
+
+### 적용
+
+프로세스가 없을 때만 한다.
+
+```bash
+ROOT=/data/yunji/latent-planner-work bash scripts/apply_env_patches.sh
+```
+
+적용 전에 각 파일의 sha256을 기록한다. 원본은 `/data/yunji/latent-planner-work/backups/onthegroundpanda_nullbase/<UTC>/` 아래에 `rpent-libero_on_the_ground_panda.py`, `rpent-liberopro_on_the_ground_panda.py`로 복사한다. `default_base`가 이미 `return "NullBase"`이면 그 파일은 건너뛴다. 다시 실행해도 된다.
+
+적용 뒤에 적용 전 sha256, 적용 후 sha256, diff를 로그에 덧붙인다. `ROOT`가 설정되어 있으면 `$ROOT/logs/env_patches.log`이다. 작업 트리에 쓰려면 `ROOT=/data/yunji/latent-planner-work`를 준다. `ROOT`가 unset이면 저장소 `logs/env_patches.log`에 쓴다.
+
+이 스크립트는 `CUDA_VISIBLE_DEVICES`를 설정하지 않는다.
+
+### 확인
+
+batch01이 끝난 뒤에만 실행한다. vLLM, pi0.5, SAM3는 시작하지 않는다. env 서버만 하나씩 띄운다.
+
+```bash
+CUDA_VISIBLE_DEVICES=2 MUJOCO_EGL_DEVICE_ID=2 \
+  ROOT=/data/yunji/latent-planner-work \
+  bash scripts/verify_env_suites.sh
+```
+
+`CUDA_VISIBLE_DEVICES`가 비어 있거나 `3`을 포함하면 시작하지 않는다. 그 검사를 통과한 뒤 env 서버는 `CUDA_VISIBLE_DEVICES=2`, `MUJOCO_EGL_DEVICE_ID=2`이다. `--cuda-device`는 넘기지 않는다. env 서버가 그 플래그에서 `CUDA_VISIBLE_DEVICES`를 지우기 때문이다.
+
+순서는 `libero_object_task` task 0, `libero_10_task` task 0, `libero_goal_task` task 0이다. seed는 0이다. 하나씩 reset하고 agentview 이미지를 `$ROOT/outputs/env_verify/<suite>_task0_agentview.png`에 저장한 뒤 그 서버를 끄고 다음으로 간다. `LIBERO_TYPE=pro`.
+
+이번에는 적용하지 않았다. batch01이 아직 돌아가는 중이다.
