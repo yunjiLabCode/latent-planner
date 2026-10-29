@@ -7,7 +7,21 @@
 #   tmux new-session -s batch01
 #   ROOT=/data/yunji/latent-planner-work bash scripts/collect_batch.sh
 #
-# Log: $ROOT/logs/batch01.log (printed again after startup).
+# BATCH_NAME defaults to batch01. Episodes go to $ROOT/outputs/$BATCH_NAME/
+# and the log is $ROOT/logs/$BATCH_NAME.log (printed again after startup).
+# BATCH_QUEUE, if set, is a file of "suite task init" lines (blank lines and
+# # comments are ignored). Unset uses the 10 episodes below. The
+# refuse-if-exists check looks only at the selected output dirs.
+#
+# Retry that skips libero_goal_task task 1 and does not reuse batch01 dirs:
+#
+#   BATCH_NAME=batch01-retry2 BATCH_QUEUE=/path/to/queue.txt \
+#     ROOT=/data/yunji/latent-planner-work bash scripts/collect_batch.sh
+#
+#   libero_goal_task 0 11
+#   libero_goal_task 2 11
+#   libero_goal_swap 0 11
+#   libero_goal_swap 1 11
 #
 # Suites in AgenticRoboRL/harnesses/rpent_libero/tasks.jsonl (8 x 10 tasks):
 #   libero_spatial_task, libero_spatial_swap,
@@ -50,9 +64,14 @@ set -euo pipefail
 ROOT="${ROOT:-/data/yunji/latent-planner-work}"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+BATCH_NAME="${BATCH_NAME:-batch01}"
+if [[ ! "$BATCH_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+    echo "BATCH_NAME must be one directory name, got: $BATCH_NAME" >&2
+    exit 1
+fi
 
-LOG="$ROOT/logs/batch01.log"
-RUNLOG="$ROOT/logs/batch01"
+LOG="$ROOT/logs/${BATCH_NAME}.log"
+RUNLOG="$ROOT/logs/${BATCH_NAME}"
 STATE="$RUNLOG/state"
 N_WORKERS=4
 MODEL_PORT="${MODEL_PORT:-18100}"
@@ -134,29 +153,67 @@ need_cmd setsid
 need_cmd flock
 need_cmd nvidia-smi
 
+declare -a QUEUE_LINES=()
+
+append_job() {
+    local suite=$1 task=$2 init=$3
+    if [[ ! "$suite" =~ ^libero_[A-Za-z0-9_]+$ || ! "$task" =~ ^[0-9]+$ || ! "$init" =~ ^[0-9]+$ ]]; then
+        echo "bad queue line: $suite $task $init" >&2
+        exit 1
+    fi
+    QUEUE_LINES+=("$suite $task $init")
+}
+
+if [[ -n "${BATCH_QUEUE:-}" ]]; then
+    if [[ ! -f "$BATCH_QUEUE" ]]; then
+        echo "BATCH_QUEUE is not a file: $BATCH_QUEUE" >&2
+        exit 1
+    fi
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [[ -z "$line" ]] && continue
+        # shellcheck disable=SC2086
+        set -- $line
+        if [[ $# -ne 3 ]]; then
+            echo "bad queue line: $line" >&2
+            exit 1
+        fi
+        append_job "$1" "$2" "$3"
+    done <"$BATCH_QUEUE"
+else
+    append_job libero_goal_task 0 11
+    append_job libero_goal_task 1 11
+    append_job libero_goal_task 2 11
+    append_job libero_object_task 0 11
+    append_job libero_object_task 1 11
+    append_job libero_10_task 0 11
+    append_job libero_10_task 1 11
+    append_job libero_10_task 2 11
+    append_job libero_goal_swap 0 11
+    append_job libero_goal_swap 1 11
+fi
+if [[ ${#QUEUE_LINES[@]} -eq 0 ]]; then
+    echo "queue is empty" >&2
+    exit 1
+fi
+
 mkdir -p "$RUNLOG/episodes" "$STATE/running"
 : >"$STATE/completed"
 rm -f "$STATE/abort" "$STATE/stop"
 QUEUE="$STATE/queue"
-cat >"$QUEUE" <<'EOF'
-libero_goal_task 0 11
-libero_goal_task 1 11
-libero_goal_task 2 11
-libero_object_task 0 11
-libero_object_task 1 11
-libero_10_task 0 11
-libero_10_task 1 11
-libero_10_task 2 11
-libero_goal_swap 0 11
-libero_goal_swap 1 11
-EOF
+printf '%s\n' "${QUEUE_LINES[@]}" >"$QUEUE"
 
 mkdir -p "$(dirname "$LOG")"
 echo "log: $LOG"
 exec > >(tee -a "$LOG") 2>&1
 echo "log: $LOG"
-echo "batch01 root: $ROOT"
-echo "episodes: 10  workers: $N_WORKERS  gpus: vLLM=0,1 pi05/sam3/env=2"
+echo "${BATCH_NAME} root: $ROOT"
+echo "episodes: ${#QUEUE_LINES[@]}  workers: $N_WORKERS  gpus: vLLM=0,1 pi05/sam3/env=2"
+if [[ -n "${BATCH_QUEUE:-}" ]]; then
+    echo "queue: $BATCH_QUEUE"
+fi
 
 declare -a SERVER_PIDS=()
 declare -a WORKER_PIDS=()
@@ -251,17 +308,14 @@ done
 
 episode_dir() {
     local suite=$1 task=$2 init=$3 attempt=$4
-    printf '%s/outputs/batch01/%s/task_%02d/seed_%03d/attempt_%02d' \
-        "$ROOT" "$suite" "$task" "$init" "$attempt"
+    printf '%s/outputs/%s/%s/task_%02d/seed_%03d/attempt_%02d' \
+        "$ROOT" "$BATCH_NAME" "$suite" "$task" "$init" "$attempt"
 }
 
-for spec in "libero_goal_task 0" "libero_goal_task 1" "libero_goal_task 2" \
-            "libero_object_task 0" "libero_object_task 1" \
-            "libero_10_task 0" "libero_10_task 1" "libero_10_task 2" \
-            "libero_goal_swap 0" "libero_goal_swap 1"; do
+for line in "${QUEUE_LINES[@]}"; do
     # shellcheck disable=SC2086
-    set -- $spec
-    out=$(printf '%s/outputs/batch01/%s/task_%02d/seed_%03d' "$ROOT" "$1" "$2" 11)
+    set -- $line
+    out=$(printf '%s/outputs/%s/%s/task_%02d/seed_%03d' "$ROOT" "$BATCH_NAME" "$1" "$2" "$3")
     if compgen -G "${out}/attempt_*" >/dev/null; then
         echo "refusing to reuse existing ${out}/attempt_*" >&2
         exit 1
@@ -799,7 +853,7 @@ convert_attempt() {
     local eid
     eid=$(printf '%s_t%02d_seed%03d_attempt%02d' "$suite" "$task" "$init" "$attempt")
     if ! PYTHONPATH="${REPO_ROOT}/src${PYTHONPATH:+:$PYTHONPATH}" \
-        "$RPENT_ENV/bin/python" - "$dir" "$ROOT/outputs/batch01/traces" batch01 "$eid" <<'PY'
+        "$RPENT_ENV/bin/python" - "$dir" "$ROOT/outputs/${BATCH_NAME}/traces" "$BATCH_NAME" "$eid" <<'PY'
 import sys
 from pathlib import Path
 from trace.converter import convert_episode
@@ -1040,7 +1094,7 @@ echo 1 >"$STATE/stop"
 kill -TERM "$MONITOR_PID" 2>/dev/null || true
 wait "$MONITOR_PID" || true
 log_gpu || true
-echo "batch01 finished completed=$(wc -l <"$STATE/completed" | tr -d ' ') log=$LOG"
+echo "${BATCH_NAME} finished completed=$(wc -l <"$STATE/completed" | tr -d ' ') log=$LOG"
 if [[ -f "$STATE/abort" || "$watch_rc" -ne 0 ]]; then
     exit 1
 fi
