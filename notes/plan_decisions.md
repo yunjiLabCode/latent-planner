@@ -61,3 +61,11 @@ pi0.5 predict는 bf16 평균 0.84초, fp16 래퍼는 0.34초다. 병목은 플�
 `libero_10_task` task 2 (`KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it`)의 `.pruned_init`은 364바이트이고 `torch.load` 결과가 shape `(0,)`이다. 로컬 휠, `RLinf/LIBERO-PRO` master, 같은 저장소 `rpent` 브랜치가 바이트 단위로 같다 (sha256 `031ef7f9af0e3d30cdae0c2bc57c4032bedbbda045ea4f2707f6ab1601320e48`). `liberopro-download-assets`가 만든 파일이 아니다. `tasks.jsonl` train 목록(init 11–44)에는 들어 있다.
 
 결정: 빈 init의 대체 파일을 찾기 전까지 수집 목록에서 이 태스크만 제외한다. suite 전체는 빼지 않는다. 평가(init 1–10)에서도 같은 태스크를 제외한다. init 파일이 모든 소스에서 비어 있으므로 baseline도 이 태스크를 실행하지 못했을 가능성이 크다. 비교에서는 양쪽 모두 이 태스크를 제외한다.
+
+## 8. TITAN RTX TP=2 vLLM은 custom allreduce와 P2P를 끈다
+
+2026-10-29.
+
+13:22 EngineCore `sample_tokens` 행은 이 기계의 P2P/custom allreduce로 의심한다. TITAN RTX에서 TP=2 vLLM은 `--disable-custom-all-reduce`와 `NCCL_P2P_DISABLE=1`을 쓴다. `NCCL_DEBUG=WARN`은 자기 로그로 간다. pi0.5 dtype은 바꾸지 않는다.
+
+결정: 다음 수집의 vLLM만 이 플래그와 환경 변수를 쓴다. pi0.5는 bf16 그대로다.

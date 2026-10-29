@@ -246,3 +246,7 @@ CUDA_VISIBLE_DEVICES=2 MUJOCO_EGL_DEVICE_ID=2 \
 순서는 `libero_object_task` task 0, `libero_10_task` task 0, `libero_goal_task` task 0이다. seed는 0이다. 하나씩 reset하고 agentview 이미지를 `$ROOT/outputs/env_verify/<suite>_task0_agentview.png`에 저장한 뒤 그 서버를 끄고 다음으로 간다. `LIBERO_TYPE=pro`.
 
 이번에는 적용하지 않았다. batch01이 아직 돌아가는 중이다.
+
+## 다음 배치의 vLLM 재시작 (2026-10-29)
+
+서버는 시작하지 않았다. 다음 `scripts/collect_batch.sh`는 단계 4 serve(TP=2, dtype half, util 0.85, max-model-len 262144, prefix caching)에 `--disable-custom-all-reduce`를 더한다. 그 프로세스만 `NCCL_P2P_DISABLE=1`, `NCCL_DEBUG=WARN`이고, NCCL 로그는 `$ROOT/logs/nccl_vllm.log`다. GPU 3은 쓰지 않는다. 30초마다 `/health`를 본다. 돌아가는 요청이 5분 동안 토큰을 내지 않으면 stall이다. stall이거나 vLLM이 죽으면 워커를 멈추고 vLLM을 다시 띄우고, health가 돌아오면 워커를 재개한다. 그때 진행 중이던 attempt는 `failure_kind=infrastructure`로 남기고 새 attempt로 다시 돌린다. 서버가 다운인 동안에는 인프라 재시도 1회를 쓰지 않는다. 재시작마다 시각과 이전 vLLM 로그 꼬리를 `$ROOT/logs/vllm_restarts.log`에 붙인다.
