@@ -53,3 +53,11 @@ pi0.5 predict는 bf16 평균 0.84초, fp16 래퍼는 0.34초다. 병목은 플�
 플래너 턴 36개 중 실행 결정은 10개, 쿼리는 32개였다. 쿼리는 `segment`, `view_env_state`, `back_project` 같은 호출이다.
 
 결정: 실행 결정만 바꾸는 latent planner의 가속은 제한적이다. 쿼리 동작, 특히 실패 감지로 쓰이는 `view_env_state`는 observation 입력과 decoder가 흡수해야 한다. part 2를 설계할 때 다시 본다.
+
+## 7. libero_10_task task 2는 수집과 평가에서 뺀다
+
+2026-10-29. 근거는 `notes/batch01_env_failures.md`.
+
+`libero_10_task` task 2 (`KITCHEN_SCENE3_turn_on_the_stove_and_put_the_moka_pot_on_it`)의 `.pruned_init`은 364바이트이고 `torch.load` 결과가 shape `(0,)`이다. 로컬 휠, `RLinf/LIBERO-PRO` master, 같은 저장소 `rpent` 브랜치가 바이트 단위로 같다 (sha256 `031ef7f9af0e3d30cdae0c2bc57c4032bedbbda045ea4f2707f6ab1601320e48`). `liberopro-download-assets`가 만든 파일이 아니다. `tasks.jsonl` train 목록(init 11–44)에는 들어 있다.
+
+결정: 빈 init의 대체 파일을 찾기 전까지 수집 목록에서 이 태스크만 제외한다. suite 전체는 빼지 않는다. 평가(init 1–10)에서도 같은 태스크를 제외한다. init 파일이 모든 소스에서 비어 있으므로 baseline도 이 태스크를 실행하지 못했을 가능성이 크다. 비교에서는 양쪽 모두 이 태스크를 제외한다.
