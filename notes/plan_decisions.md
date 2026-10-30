@@ -69,3 +69,9 @@ pi0.5 predict는 bf16 평균 0.84초, fp16 래퍼는 0.34초다. 병목은 플�
 13:22 EngineCore `sample_tokens` 행은 이 기계의 P2P/custom allreduce로 의심한다. TITAN RTX에서 TP=2 vLLM은 `--disable-custom-all-reduce`와 `NCCL_P2P_DISABLE=1`을 쓴다. `NCCL_DEBUG=WARN`은 자기 로그로 간다. pi0.5 dtype은 바꾸지 않는다.
 
 결정: 다음 수집의 vLLM만 이 플래그와 환경 변수를 쓴다. pi0.5는 bf16 그대로다.
+
+2026-10-29 20:33 KST 확인. `batch01-goal-retry2`는 건드리지 않았다.
+
+- 감시와 자동 재시작은 켜져 있다. 실행 중인 `scripts/collect_batch.sh`(pid 2433427)가 `VLLM_HEALTH_S=30`, `VLLM_STALL_S=300`으로 `watch_vllm`을 돈다. 죽거나 5분 동안 토큰이 없으면 vLLM을 다시 띄운다.
+- 재시작 기록 경로는 `/data/yunji/latent-planner-work/logs/vllm_restarts.log`다. 아직 파일이 없다. 재시작이 한 번도 없었다.
+- `nvidia-smi topo -m`에서 GPU0–GPU1은 `NODE`다. NVLink(`NV#`)가 아니고, 같은 NUMA 안에서 PCIe와 Host Bridge를 거친다. GPU1–GPU0도 `NODE`다.
