@@ -1,4 +1,4 @@
-"""Convert one RPent output directory into trace schema v0.2.1.
+"""Convert one RPent output directory into trace schema v0.3.
 
 Reads ``states.json`` and ``transcript_*.json`` written by RPent ``f70d720``
 plus ``AgenticRoboRL/patches/rpent/rpent_f70d720.patch``. Does not read images
@@ -8,6 +8,7 @@ and does not use transcript ``solved`` or ``environment_success``.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -18,6 +19,7 @@ from trace.schema import (
     ContextCall,
     Decision,
     Episode,
+    FailureKind,
     TeacherText,
 )
 from trace.tool_classes import (
@@ -71,11 +73,14 @@ def convert_episode(
     if not isinstance(messages, list):
         warnings.append("transcript has no messages list")
         messages = []
-    executions, trailing, n_memory_reads, parse_warnings = _walk_messages(messages)
+    executions, trailing, n_memory_reads, parse_warnings, n_tool_calls = _walk_messages(
+        messages
+    )
     warnings.extend(parse_warnings)
+    transcript_missing = n_tool_calls == 0
 
     commanded = [step for step in steps if isinstance(step, dict) and step.get("command")]
-    if len(executions) != len(commanded):
+    if not transcript_missing and len(executions) != len(commanded):
         warnings.append(
             "execution count disagrees: "
             f"transcript={len(executions)} states.json={len(commanded)}"
@@ -98,7 +103,9 @@ def convert_episode(
             warnings.append(f"step {step.get('step_idx')} {primitive or '?'} result is not an object")
             result = {}
         bound: _Call | None = None
-        if index < limit:
+        if transcript_missing:
+            bound = None
+        elif index < limit:
             call = executions[index]
             if call.name != primitive:
                 warnings.append(
@@ -150,21 +157,6 @@ def convert_episode(
             }
         )
 
-    roles, recovery_episodes = classify_labels(raw)
-    for index, record in enumerate(raw):
-        success = primitive_success(
-            record["primitive"], record["result"], record["arguments"]
-        )
-        role = roles[index]["role"]
-        record["labels"] = {
-            "primitive_success": success,
-            "relation_to_failed": relation_to_failed(raw, index),
-            "role": role,
-            "type": role,
-            "recovery_episode_id": roles[index]["recovery_episode_id"],
-        }
-        _warn_missing_signal(record, warnings)
-
     if not steps:
         warnings.append("states.json has no steps")
         outcome = {"success": False, "terminated": False, "truncated": False}
@@ -179,6 +171,29 @@ def convert_episode(
                 "terminated": last.get("terminated") is True,
                 "truncated": last.get("truncated") is True,
             }
+    _mark_terminal_success(raw, outcome["terminated"] is True)
+
+    roles, recovery_episodes = classify_labels(raw)
+    for index, record in enumerate(raw):
+        overridden = record.get("success_overridden")
+        if overridden == "terminal_success":
+            success = None
+        else:
+            success = primitive_success(
+                record["primitive"], record["result"], record["arguments"]
+            )
+        role = roles[index]["role"]
+        record["labels"] = {
+            "primitive_success": success,
+            "relation_to_failed": relation_to_failed(raw, index),
+            "role": role,
+            "type": role,
+            "recovery_episode_id": roles[index]["recovery_episode_id"],
+            "success_overridden": overridden,
+        }
+        _warn_missing_signal(record, warnings)
+    for record in raw:
+        record.pop("success_overridden", None)
 
     matched = not _disagreement(warnings)
     n_context = sum(len(record["context_calls"]) for record in raw) + len(trailing.context_calls)
@@ -196,6 +211,8 @@ def convert_episode(
         },
         task=task,
         outcome=outcome,
+        failure_kind=_failure_kind(transcript.get("agent_error"), outcome["success"]),
+        transcript_missing=transcript_missing,
         conversion={"matched": matched, "warnings": warnings},
         stats={
             "n_memory_reads": n_memory_reads,
@@ -273,7 +290,7 @@ def _episode_id_from_transcript(path: Path) -> str:
 
 def _walk_messages(
     messages: list[Any],
-) -> tuple[list[_Call], _Call, int, list[str]]:
+) -> tuple[list[_Call], _Call, int, list[str], int]:
     warnings: list[str] = []
     executions: list[_Call] = []
     pending: list[_Call] = []
@@ -281,6 +298,7 @@ def _walk_messages(
     thinking_parts: list[str] = []
     cites = False
     n_memory = 0
+    n_tool_calls = 0
 
     def _take_turn() -> None:
         nonlocal cites
@@ -302,6 +320,7 @@ def _walk_messages(
                 elif kind == "thinking":
                     thinking_parts.append(payload)
                 elif kind == "tool":
+                    n_tool_calls += 1
                     call = payload
                     if call.name in EXECUTION_TOOLS:
                         executions.append(
@@ -341,7 +360,89 @@ def _walk_messages(
         thinking=_join(thinking_parts),
         cites_memory=cites,
     )
-    return executions, trailing, n_memory, warnings
+    return executions, trailing, n_memory, warnings, n_tool_calls
+
+
+def _mark_terminal_success(records: list[dict[str, Any]], terminated: bool) -> None:
+    """Override a failed pi0_pick the episode never retries after a true end.
+
+    The heuristic ``success`` stays in ``result``. The label becomes None and
+    ``success_overridden`` is ``terminal_success`` when three things hold:
+    ``primitive_success`` is false, no later ``pi0_pick`` uses the same
+    prompt, and the episode's last state is ``terminated`` true.
+    """
+    if not terminated:
+        return
+    for index, record in enumerate(records):
+        if record.get("primitive") != "pi0_pick":
+            continue
+        success = primitive_success(
+            "pi0_pick", record.get("result") or {}, record.get("arguments") or {}
+        )
+        if success is not False:
+            continue
+        prompt = (record.get("arguments") or {}).get("prompt")
+        repeated = any(
+            later.get("primitive") == "pi0_pick"
+            and (later.get("arguments") or {}).get("prompt") == prompt
+            for later in records[index + 1 :]
+        )
+        if repeated:
+            continue
+        record["success_overridden"] = "terminal_success"
+
+
+_INFRASTRUCTURE_STATUS = re.compile(r"(?<!\d)(?:502|503|504)(?!\d)")
+
+_INFRASTRUCTURE = (
+    "connection refused",
+    "connection error",
+    "connection reset",
+    "apiconnectionerror",
+    "server disconnected",
+    "remote end closed",
+    "read timeout",
+    "readtimeout",
+    "temporarily unavailable",
+    "service unavailable",
+    "bad gateway",
+    "internal server error",
+    "cuda",
+    "out of memory",
+    "no such device",
+    "env server",
+    "environment server",
+    "failed to start",
+    "address already in use",
+    "broken pipe",
+    "killed",
+    "mujoco",
+    "egl",
+)
+
+
+def _failure_kind(agent_error: Any, success: bool) -> FailureKind:
+    """``success``, ``budget_timeout``, ``infrastructure``, or ``agent_error``.
+
+    A terminated episode is ``success``. ``ModelTimeoutError`` and
+    ``API planner timed out`` are ``budget_timeout`` even though the
+    transcript stores them in ``agent_error``. Connection, CUDA, MuJoCo,
+    and HTTP 502/503/504 strings are ``infrastructure``. Every other
+    non-success, including a teacher stop with no ``agent_error``, is
+    ``agent_error``.
+    """
+    if success:
+        return "success"
+    text = "" if agent_error is None else str(agent_error)
+    lowered = text.lower()
+    if "modeltimeouterror" in lowered or "api planner timed out" in lowered:
+        return "budget_timeout"
+    if text and (
+        any(pattern in lowered for pattern in _INFRASTRUCTURE)
+        or _INFRASTRUCTURE_STATUS.search(lowered)
+    ):
+        return "infrastructure"
+    return "agent_error"
 
 
 def _assistant_events(content: Any) -> list[tuple[str, Any, list[str]]]:

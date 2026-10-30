@@ -63,6 +63,10 @@ class FixtureTests(unittest.TestCase):
             self.assertEqual(episode["stats"]["n_memory_reads"], 1)
             self.assertEqual(episode["trailing_context_calls"][0]["name"], "finish")
             self.assertEqual(list(out.rglob("*.png")), [])
+            self.assertEqual(episode["schema_version"], "0.3")
+            self.assertEqual(episode["failure_kind"], "success")
+            self.assertIs(episode["transcript_missing"], False)
+            self.assertIsNone(decisions[0]["labels"]["success_overridden"])
 
     def test_restage_retry(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -104,6 +108,10 @@ class FixtureTests(unittest.TestCase):
             self.assertEqual(decisions[1]["obs_before"]["paths"], ["wrist.png/01.png"])
             self.assertEqual(decisions[1]["context_calls"][0]["name"], "segment")
             self.assertEqual(decisions[2]["teacher_text"]["text"], "Pick again.")
+            self.assertEqual(episode["failure_kind"], "success")
+            self.assertIs(episode["transcript_missing"], False)
+            self.assertIsNone(decisions[0]["labels"]["success_overridden"])
+            self.assertIsNone(decisions[2]["labels"]["success_overridden"])
 
     def test_truncated_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -135,6 +143,9 @@ class FixtureTests(unittest.TestCase):
             self.assertIs(episode["outcome"]["terminated"], False)
             self.assertIs(episode["outcome"]["truncated"], True)
             self.assertIs(episode["conversion"]["matched"], True)
+            self.assertEqual(episode["failure_kind"], "agent_error")
+            self.assertIs(episode["transcript_missing"], False)
+            self.assertIsNone(decisions[0]["labels"]["success_overridden"])
             self.assertEqual((out / "episode.json").is_file(), True)
             self.assertEqual((out / "decisions.jsonl").is_file(), True)
 
@@ -156,6 +167,7 @@ class FixtureTests(unittest.TestCase):
             )
             self.assertEqual(decisions[0]["primitive"], "pi0_pick")
             self.assertEqual(decisions[0]["context_calls"], [])
+            self.assertIs(episode["transcript_missing"], False)
 
     def test_relabel_rewrites_only_type(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -482,6 +494,224 @@ class RoleTests(unittest.TestCase):
                 key: value for key, value in original.items() if key != "recovery_episodes"
             }
             self.assertEqual(unchanged, original_rest)
+
+
+class SchemaV03Tests(unittest.TestCase):
+    """batch01 goal shapes. Fixtures are minimal; Hawaii logs are not in this tree."""
+
+    def _convert(self, name: str) -> tuple[dict, list[dict]]:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = convert_episode(FIXTURES / name, tmp, run_id="batch01", episode_id=name)
+            return _load(out)
+
+    def test_timeout_transcript_uses_states_only(self) -> None:
+        for name, primitives in (
+            ("batch01_goal_task_0", ["move_to", "pi0_pick"]),
+            ("batch01_goal_swap_0", ["move_to", "move_to"]),
+            ("batch01_goal_swap_1", ["move_to", "pi0_pick"]),
+        ):
+            episode, decisions = self._convert(name)
+            self.assertIs(episode["transcript_missing"], True, name)
+            self.assertEqual(episode["failure_kind"], "budget_timeout", name)
+            self.assertEqual(episode["schema_version"], "0.3", name)
+            self.assertIs(episode["outcome"]["success"], False, name)
+            self.assertIs(episode["conversion"]["matched"], True, name)
+            self.assertFalse(
+                any("execution count disagrees" in warning for warning in episode["conversion"]["warnings"]),
+                name,
+            )
+            self.assertEqual([row["primitive"] for row in decisions], primitives, name)
+            for row in decisions:
+                self.assertEqual(row["teacher_text"], {"text": "", "thinking": "", "cites_memory": False}, name)
+                self.assertEqual(row["context_calls"], [], name)
+                self.assertIsNone(row["tool_call_id"], name)
+        _episode, swap = self._convert("batch01_goal_swap_0")
+        self.assertIs(swap[0]["labels"]["primitive_success"], False)
+        self.assertEqual(swap[0]["result"]["final_dist_m"], 0.0175)
+        self.assertEqual(swap[1]["labels"]["role"], "retry")
+        task0_episode, task0 = self._convert("batch01_goal_task_0")
+        self.assertIs(task0[1]["labels"]["primitive_success"], False)
+        self.assertIsNone(task0[1]["labels"]["success_overridden"])
+        self.assertEqual(task0_episode["task"]["suite"], "libero_goal_task")
+        self.assertEqual(len(task0), 2)
+
+    def test_model_timeout_keeps_transcript_and_is_budget(self) -> None:
+        episode, decisions = self._convert("batch01_goal_task_2")
+        self.assertEqual(episode["failure_kind"], "budget_timeout")
+        self.assertIs(episode["transcript_missing"], False)
+        self.assertIs(episode["conversion"]["matched"], True)
+        self.assertIs(episode["outcome"]["terminated"], False)
+        self.assertEqual(decisions[0]["teacher_text"]["text"], "Grasp the cheese.")
+        self.assertIs(decisions[0]["labels"]["primitive_success"], False)
+        self.assertIsNone(decisions[0]["labels"]["success_overridden"])
+        self.assertEqual(decisions[1]["context_calls"], [])
+        self.assertEqual(decisions[1]["teacher_text"]["text"], "Carry it.")
+
+    def test_terminal_success_overrides_unretried_pick(self) -> None:
+        episode, decisions = self._convert("batch01_goal_task_1")
+        self.assertEqual(episode["failure_kind"], "success")
+        self.assertIs(episode["outcome"]["terminated"], True)
+        self.assertIs(episode["transcript_missing"], False)
+        self.assertIs(decisions[0]["labels"]["primitive_success"], False)
+        self.assertIsNone(decisions[0]["labels"]["success_overridden"])
+        self.assertEqual(decisions[0]["teacher_text"]["text"], "The bowl did not lift.")
+        self.assertIsNone(decisions[2]["labels"]["primitive_success"])
+        self.assertEqual(decisions[2]["labels"]["success_overridden"], "terminal_success")
+        self.assertEqual(decisions[2]["teacher_text"]["text"], "The task is done.")
+        self.assertEqual(decisions[2]["context_calls"][0]["name"], "view_env_state")
+        self.assertIs(decisions[2]["result"]["success"], False)
+        self.assertEqual(
+            episode["recovery_episodes"],
+            [
+                {
+                    "id": 1,
+                    "failed_primitive": "pi0_pick",
+                    "start_decision": 0,
+                    "end_decision": 2,
+                    "n_attempts": 2,
+                    "resolved": False,
+                    "closed_by": "episode_end",
+                }
+            ],
+        )
+
+    def test_lone_failed_pick_on_success_opens_no_recovery(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            episode, decisions = _convert_terminated_pick(root, prompt_again=False)
+            self.assertEqual(episode["failure_kind"], "success")
+            self.assertIsNone(decisions[0]["labels"]["primitive_success"])
+            self.assertEqual(decisions[0]["labels"]["success_overridden"], "terminal_success")
+            self.assertEqual(decisions[0]["labels"]["role"], "new")
+            self.assertEqual(episode["recovery_episodes"], [])
+            out = root / "traces" / "run" / "ep"
+            relabel(out / "decisions.jsonl")
+            kept, rows = _load(out)
+            self.assertIsNone(rows[0]["labels"]["primitive_success"])
+            self.assertEqual(rows[0]["labels"]["success_overridden"], "terminal_success")
+            self.assertEqual(kept["recovery_episodes"], [])
+
+    def test_repeated_prompt_is_not_overridden(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            _episode, decisions = _convert_terminated_pick(Path(tmp), prompt_again=True)
+        self.assertIs(decisions[0]["labels"]["primitive_success"], False)
+        self.assertIsNone(decisions[0]["labels"]["success_overridden"])
+        self.assertIs(decisions[1]["labels"]["primitive_success"], True)
+        self.assertIsNone(decisions[1]["labels"]["success_overridden"])
+
+    def test_different_prompts_are_both_overridden(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "src"
+            source.mkdir()
+            steps = [
+                {"step_idx": 0, "state": {}, "terminated": False, "truncated": False, "artifacts": []},
+                {
+                    "step_idx": 1,
+                    "terminated": False,
+                    "truncated": False,
+                    "artifacts": [],
+                    "command": {"action": "pi0_pick", "prompt": "bowl"},
+                    "result": {"success": False},
+                },
+                {
+                    "step_idx": 2,
+                    "terminated": True,
+                    "truncated": False,
+                    "artifacts": [],
+                    "command": {"action": "pi0_pick", "prompt": "plate"},
+                    "result": {"success": False},
+                },
+            ]
+            (source / "states.json").write_text(json.dumps({"steps": steps}))
+            messages = [
+                {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "tool_use", "id": "a", "name": "pi0_pick", "input": {"prompt": "bowl"}},
+                        {"type": "tool_use", "id": "b", "name": "pi0_pick", "input": {"prompt": "plate"}},
+                    ],
+                }
+            ]
+            (source / "transcript_case.json").write_text(
+                json.dumps({"suite": "libero_goal_task", "task": 1, "seed": 11, "messages": messages})
+            )
+            episode, decisions = _load(
+                convert_episode(source, root / "traces", run_id="run", episode_id="ep")
+            )
+        self.assertEqual(episode["failure_kind"], "success")
+        self.assertEqual(
+            [row["labels"]["success_overridden"] for row in decisions],
+            ["terminal_success", "terminal_success"],
+        )
+        self.assertEqual(episode["recovery_episodes"], [])
+
+    def test_failure_kind_values(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            copied = root / "src"
+            shutil.copytree(FIXTURES / "batch01_goal_task_2", copied)
+            transcript = copied / "transcript_goal_t2.json"
+            cases = {
+                "CUDA out of memory": "infrastructure",
+                "read timeout from the env server": "infrastructure",
+                "upstream 503": "infrastructure",
+                "ModelTimeoutError: read timeout": "budget_timeout",
+                "ValueError: bad tool args": "agent_error",
+            }
+            for error, kind in cases.items():
+                payload = json.loads(transcript.read_text())
+                payload["agent_error"] = error
+                transcript.write_text(json.dumps(payload))
+                episode, _decisions = _load(
+                    convert_episode(copied, root / "traces", run_id="run", episode_id="ep")
+                )
+                self.assertEqual(episode["failure_kind"], kind, error)
+                self.assertIn(
+                    episode["failure_kind"],
+                    ("success", "agent_error", "budget_timeout", "infrastructure"),
+                )
+
+
+def _convert_terminated_pick(root: Path, *, prompt_again: bool) -> tuple[dict, list[dict]]:
+    commands = [("pi0_pick", {"prompt": "bowl"}, {"name": "pick", "success": False})]
+    if prompt_again:
+        commands.append(("pi0_pick", {"prompt": "bowl"}, {"name": "pick", "success": True}))
+    source = root / "src"
+    source.mkdir()
+    steps: list[dict] = [
+        {"step_idx": 0, "state": {}, "terminated": False, "truncated": False, "artifacts": ["agentview.png"]}
+    ]
+    content: list[dict] = []
+    for index, (name, arguments, result) in enumerate(commands, start=1):
+        last = index == len(commands)
+        steps.append(
+            {
+                "step_idx": index,
+                "state": {},
+                "terminated": last,
+                "truncated": False,
+                "artifacts": ["agentview.png"],
+                "command": {"action": name, **arguments},
+                "result": result,
+                "elapsed_s": 0.2,
+            }
+        )
+        content.append({"type": "tool_use", "id": f"c{index}", "name": name, "input": arguments})
+    (source / "states.json").write_text(json.dumps({"steps": steps}))
+    (source / "transcript_case.json").write_text(
+        json.dumps(
+            {
+                "suite": "libero_goal_task",
+                "task": 1,
+                "seed": 11,
+                "model": "test",
+                "agent_error": None,
+                "messages": [{"role": "assistant", "content": content}],
+            }
+        )
+    )
+    return _load(convert_episode(source, root / "traces", run_id="run", episode_id="ep"))
 
 
 if __name__ == "__main__":

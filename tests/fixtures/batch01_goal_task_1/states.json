@@ -1,0 +1,42 @@
+{
+  "run_artifacts": [],
+  "steps": [
+    {
+      "step_idx": 0,
+      "state": {},
+      "terminated": false,
+      "truncated": false,
+      "artifacts": ["agentview.png"]
+    },
+    {
+      "step_idx": 2,
+      "state": {},
+      "terminated": false,
+      "truncated": false,
+      "artifacts": ["agentview.png"],
+      "command": {"action": "pi0_pick", "prompt": "pick up the bowl"},
+      "result": {"name": "pick", "success": false, "terminated": false},
+      "elapsed_s": 1.0
+    },
+    {
+      "step_idx": 3,
+      "state": {},
+      "terminated": false,
+      "truncated": false,
+      "artifacts": ["wrist.png"],
+      "command": {"action": "move_to", "xyz": [0.1, 0.0, 0.2]},
+      "result": {"name": "move_to", "final_dist_m": 0.001},
+      "elapsed_s": 0.4
+    },
+    {
+      "step_idx": 4,
+      "state": {},
+      "terminated": true,
+      "truncated": false,
+      "artifacts": ["agentview.png"],
+      "command": {"action": "pi0_pick", "prompt": "pick up the bowl"},
+      "result": {"name": "pick", "success": false, "terminated": true},
+      "elapsed_s": 1.2
+    }
+  ]
+}

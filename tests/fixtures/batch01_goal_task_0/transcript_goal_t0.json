@@ -1,0 +1,12 @@
+{
+  "suite": "libero_goal_task",
+  "task": 0,
+  "seed": 11,
+  "model": "openai-chat:qwen",
+  "solved": false,
+  "agent_error": "API planner timed out after 7200s",
+  "finish": null,
+  "messages": [
+    {"role": "user", "content": "solve the task"}
+  ]
+}

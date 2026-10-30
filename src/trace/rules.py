@@ -1,4 +1,4 @@
-"""Primitive success and decision labels for trace schema v0.2.1.
+"""Primitive success and decision labels for trace schema v0.3.
 
 Targets RPent ``f70d720`` (``robots/libero/tools.py``). The AgenticRoboRL
 patch does not change these function bodies.
@@ -11,6 +11,13 @@ both position and yaw. This module follows ``f70d720``.
 
 Role rules read :func:`primitive_success`. False is a failure. None is not.
 ``labels.type`` is the same string as ``labels.role``.
+
+A ``pi0_pick`` whose heuristic ``success`` is false, whose prompt is not
+picked again, and whose episode ends ``terminated`` true is stored as
+``labels.primitive_success`` None with ``labels.success_overridden``
+``terminal_success``. :func:`_success_of` honors that flag so role and
+``relation_to_failed`` follow the override. :func:`primitive_success` itself
+stays the heuristic.
 """
 
 from __future__ import annotations
@@ -120,12 +127,7 @@ def relation_to_failed(
     current = records[index]
     if current.get("primitive") != "pi0_pick":
         return None
-    if (
-        primitive_success(
-            current["primitive"], current.get("result") or {}, current.get("arguments") or {}
-        )
-        is not True
-    ):
+    if _success_of(current) is not True:
         return None
     cursor = index - 1
     saw_move = False
@@ -137,15 +139,18 @@ def relation_to_failed(
     earlier = records[cursor]
     if earlier.get("primitive") != "pi0_pick":
         return None
-    failed = primitive_success(
-        earlier["primitive"], earlier.get("result") or {}, earlier.get("arguments") or {}
-    )
-    if failed is False:
+    if _success_of(earlier) is False:
         return RESTAGE_RETRY
     return None
 
 
 def _success_of(record: Mapping[str, Any]) -> bool | None:
+    """Heuristic success, or None when the terminal-success override is set."""
+    if record.get("success_overridden") == "terminal_success":
+        return None
+    labels = record.get("labels")
+    if isinstance(labels, dict) and labels.get("success_overridden") == "terminal_success":
+        return None
     return primitive_success(
         str(record.get("primitive") or ""),
         record.get("result") or {},

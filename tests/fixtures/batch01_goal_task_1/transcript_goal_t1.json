@@ -1,0 +1,33 @@
+{
+  "suite": "libero_goal_task",
+  "task": 1,
+  "seed": 11,
+  "model": "openai-chat:qwen",
+  "solved": true,
+  "agent_error": null,
+  "messages": [
+    {"role": "user", "content": "solve the task"},
+    {
+      "role": "assistant",
+      "content": [
+        {"type": "text", "text": "The bowl did not lift."},
+        {"type": "tool_use", "id": "p1", "name": "pi0_pick", "input": {"prompt": "pick up the bowl"}}
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {"type": "text", "text": "Move closer."},
+        {"type": "tool_use", "id": "m1", "name": "move_to", "input": {"xyz": [0.1, 0.0, 0.2]}}
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {"type": "text", "text": "The task is done."},
+        {"type": "tool_use", "id": "q1", "name": "view_env_state", "input": {"step": 3}},
+        {"type": "tool_use", "id": "p2", "name": "pi0_pick", "input": {"prompt": "pick up the bowl"}}
+      ]
+    }
+  ]
+}

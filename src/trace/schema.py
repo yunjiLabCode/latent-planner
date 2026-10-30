@@ -1,7 +1,9 @@
-"""Pydantic models for trace schema v0.2.1.
+"""Pydantic models for trace schema v0.3.
 
-Matching, outcome, observation paths, and primitive success are unchanged.
-Label rules are documented in ``notes/trace_schema_v0.2.1.md``.
+v0.2.1 matching, outcome, observation paths, and primitive success stay.
+v0.3 adds ``transcript_missing``, ``failure_kind``, and the pi0_pick
+``terminal_success`` override. Label rules are documented in
+``notes/trace_schema_v0.2.1.md``.
 """
 
 from __future__ import annotations
@@ -10,7 +12,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA_VERSION: Literal["0.2.1"] = "0.2.1"
+SCHEMA_VERSION: Literal["0.3"] = "0.3"
+
+FailureKind = Literal["success", "agent_error", "budget_timeout", "infrastructure"]
 
 
 class ObsBefore(BaseModel):
@@ -44,6 +48,7 @@ class Labels(BaseModel):
     role: str
     type: str
     recovery_episode_id: int | None = None
+    success_overridden: Literal["terminal_success"] | None = None
 
 
 class RecoveryEpisode(BaseModel):
@@ -104,12 +109,14 @@ class EpisodeStats(BaseModel):
 class Episode(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    schema_version: Literal["0.2.1"] = SCHEMA_VERSION
+    schema_version: Literal["0.3"] = SCHEMA_VERSION
     run_id: str
     episode_id: str
     source: dict[str, Any]
     task: dict[str, Any]
     outcome: Outcome
+    failure_kind: FailureKind
+    transcript_missing: bool = False
     conversion: Conversion
     stats: EpisodeStats
     recovery_episodes: list[RecoveryEpisode] = Field(default_factory=list)

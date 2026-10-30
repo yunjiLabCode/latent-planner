@@ -1,0 +1,26 @@
+{
+  "suite": "libero_goal_task",
+  "task": 2,
+  "seed": 11,
+  "model": "openai-chat:qwen",
+  "solved": false,
+  "agent_error": "ModelTimeoutError: the next request timed out",
+  "finish": null,
+  "messages": [
+    {"role": "user", "content": "solve the task"},
+    {
+      "role": "assistant",
+      "content": [
+        {"type": "text", "text": "Grasp the cheese."},
+        {"type": "tool_use", "id": "p1", "name": "pi0_pick", "input": {"prompt": "pick up the cream cheese"}}
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {"type": "text", "text": "Carry it."},
+        {"type": "tool_use", "id": "m1", "name": "move_to", "input": {"xyz": [0.2, 0.0, 0.3]}}
+      ]
+    }
+  ]
+}
