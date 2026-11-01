@@ -65,7 +65,9 @@ harness.yaml eval과 비교해 확인된 것만.
 
 최대 프롬프트: goal task 0은 60,167, task 2는 58,612, swap 0은 52,930, swap 1은 64,685. 스모크 최대 56,937보다 큰 것이 3개다. 떠 있던 TP=2, util 0.85 로그의 KV 캐시는 598,814토큰이다. GPU 한 장 값은 아니다.
 
-수집 pane은 죽었는데 vLLM pid 2433462와 π0.5, SAM3가 GPU를 잡고 있어, TP=1 util 0.90 측정은 아직 하지 않았다. 그 프로세스를 내린 뒤 짧게 잰다.
+TP=1 측정은 2026-10-30 17:29 KST에 끝냈다. 남은 retry2 서버는 이미 없었고, GPU 0에만 `rl-v006`을 띄웠다. TP=1, `--dtype half`, gpu-memory-utilization 0.90, max-model-len은 모델 기본 262144. 로그는 `/data/yunji/latent-planner-work/logs/kv_probe_gpu0.log`다. 가중치 17.66 GiB. 엔진은 기동을 거부했다. 로그의 available KV는 0.02 GiB이고, 길이 262144 요청 하나에 8.1 GiB가 필요하다. 추정 최대 길이는 0이라 "GPU KV cache size" 줄이 없다. 측정 후 서버는 내렸다. GPU 0–3은 7 MiB다.
+
+65k(64,685) 하나에는 8.1 × 64685 / 262144 ≈ 2.0 GiB가 필요하다. 0.02 GiB로는 동시 0개다. GPU 한 장에 65k 에피소드를 올리는 구성은 이 설정에서 성립하지 않는다.
 
 ## 7. matched=false
 
