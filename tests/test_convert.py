@@ -646,6 +646,117 @@ class SchemaV03Tests(unittest.TestCase):
         )
         self.assertEqual(episode["recovery_episodes"], [])
 
+    def test_timeout_marker_matches_and_keeps_a_one_step_prefix(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            aligned = _convert_tools(
+                root / "aligned",
+                commands=[("move_to", {"xyz": [0.1]}, {"final_dist_m": 0.01})],
+                calls=[("move_to", {"xyz": [0.1]})],
+                agent_error="API planner timed out after 7200s",
+                terminated_by="planner_timeout",
+            )
+            episode, decisions = aligned
+            self.assertIs(episode["transcript_missing"], False)
+            self.assertIs(episode["conversion"]["matched"], True)
+            self.assertEqual(episode["failure_kind"], "budget_timeout")
+            self.assertEqual(episode["conversion"]["warnings"], [])
+            self.assertEqual([row["primitive"] for row in decisions], ["move_to"])
+            self.assertEqual(decisions[0]["teacher_text"]["text"], "Move.")
+
+            extra_call = _convert_tools(
+                root / "extra-call",
+                commands=[
+                    ("move_to", {"xyz": [0.1]}, {"final_dist_m": 0.01}),
+                    ("pi0_pick", {"prompt": "bowl"}, {"success": False}),
+                ],
+                calls=[
+                    ("move_to", {"xyz": [0.1]}),
+                    ("pi0_pick", {"prompt": "bowl"}),
+                    ("move_to", {"xyz": [0.2]}),
+                ],
+                agent_error="API planner timed out after 7200s",
+                terminated_by="planner_timeout",
+            )
+            episode, decisions = extra_call
+            self.assertIs(episode["transcript_missing"], False)
+            self.assertIs(episode["conversion"]["matched"], True)
+            self.assertEqual(
+                [row["primitive"] for row in decisions],
+                ["move_to", "pi0_pick"],
+            )
+            self.assertFalse(
+                any("execution count disagrees" in warning for warning in episode["conversion"]["warnings"])
+            )
+
+            extra_state = _convert_tools(
+                root / "extra-state",
+                commands=[
+                    ("move_to", {"xyz": [0.1]}, {"final_dist_m": 0.01}),
+                    ("pi0_pick", {"prompt": "bowl"}, {"success": False}),
+                ],
+                calls=[("move_to", {"xyz": [0.1]})],
+                agent_error="ModelTimeoutError: the next request timed out",
+                terminated_by="model_timeout",
+            )
+            episode, decisions = extra_state
+            self.assertIs(episode["transcript_missing"], False)
+            self.assertIs(episode["conversion"]["matched"], True)
+            self.assertEqual(episode["failure_kind"], "budget_timeout")
+            self.assertEqual([row["primitive"] for row in decisions], ["move_to"])
+
+            last_name = _convert_tools(
+                root / "last-name",
+                commands=[
+                    ("move_to", {"xyz": [0.1]}, {"final_dist_m": 0.01}),
+                    ("pi0_pick", {"prompt": "bowl"}, {"success": False}),
+                ],
+                calls=[
+                    ("move_to", {"xyz": [0.1]}),
+                    ("release", {}),
+                ],
+                agent_error="API planner timed out after 7200s",
+                terminated_by="planner_timeout",
+            )
+            episode, decisions = last_name
+            self.assertIs(episode["conversion"]["matched"], True)
+            self.assertEqual([row["primitive"] for row in decisions], ["move_to"])
+            self.assertFalse(
+                any("transcript tool" in warning for warning in episode["conversion"]["warnings"])
+            )
+
+            middle = _convert_tools(
+                root / "middle",
+                commands=[
+                    ("move_to", {"xyz": [0.1]}, {"final_dist_m": 0.01}),
+                    ("pi0_pick", {"prompt": "bowl"}, {"success": False}),
+                    ("move_to", {"xyz": [0.2]}, {"final_dist_m": 0.01}),
+                ],
+                calls=[
+                    ("move_to", {"xyz": [0.1]}),
+                    ("release", {}),
+                    ("move_to", {"xyz": [0.2]}),
+                ],
+            )
+            episode, decisions = middle
+            self.assertIs(episode["conversion"]["matched"], False)
+            self.assertEqual(len(decisions), 3)
+
+            two_extra = _convert_tools(
+                root / "two-extra",
+                commands=[("move_to", {"xyz": [0.1]}, {"final_dist_m": 0.01})],
+                calls=[
+                    ("move_to", {"xyz": [0.1]}),
+                    ("pi0_pick", {"prompt": "bowl"}),
+                    ("release", {}),
+                ],
+            )
+            episode, _decisions = two_extra
+            self.assertIs(episode["conversion"]["matched"], False)
+            self.assertTrue(
+                any("execution count disagrees" in warning for warning in episode["conversion"]["warnings"])
+            )
+
     def test_failure_kind_values(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -671,6 +782,56 @@ class SchemaV03Tests(unittest.TestCase):
                     episode["failure_kind"],
                     ("success", "agent_error", "budget_timeout", "infrastructure"),
                 )
+
+
+def _convert_tools(
+    root: Path,
+    *,
+    commands: list[tuple[str, dict, dict]],
+    calls: list[tuple[str, dict]],
+    agent_error: str | None = None,
+    terminated_by: str | None = None,
+) -> tuple[dict, list[dict]]:
+    source = root / "src"
+    source.mkdir(parents=True)
+    steps: list[dict] = [
+        {"step_idx": 0, "state": {}, "terminated": False, "truncated": False, "artifacts": []}
+    ]
+    for index, (name, arguments, result) in enumerate(commands, start=1):
+        steps.append(
+            {
+                "step_idx": index,
+                "terminated": False,
+                "truncated": False,
+                "artifacts": [],
+                "command": {"action": name, **arguments},
+                "result": result,
+                "elapsed_s": 0.2,
+            }
+        )
+    content = [{"type": "text", "text": "Move."}]
+    content.extend(
+        {"type": "tool_use", "id": f"c{index}", "name": name, "input": arguments}
+        for index, (name, arguments) in enumerate(calls, start=1)
+    )
+    record = {
+        "suite": "libero_goal_task",
+        "task": 0,
+        "seed": 11,
+        "model": "test",
+        "agent_error": agent_error,
+        "finish": None,
+        "stats": {},
+        "messages": [
+            {"role": "user", "content": "solve the task"},
+            {"role": "assistant", "content": content},
+        ],
+    }
+    if terminated_by:
+        record["terminated_by"] = terminated_by
+    (source / "states.json").write_text(json.dumps({"steps": steps}))
+    (source / "transcript_case.json").write_text(json.dumps(record))
+    return _load(convert_episode(source, root / "traces", run_id="run", episode_id="ep"))
 
 
 def _convert_terminated_pick(root: Path, *, prompt_again: bool) -> tuple[dict, list[dict]]:

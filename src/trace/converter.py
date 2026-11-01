@@ -80,6 +80,13 @@ def convert_episode(
     transcript_missing = n_tool_calls == 0
 
     commanded = [step for step in steps if isinstance(step, dict) and step.get("command")]
+    if not transcript_missing:
+        # A timeout can leave one trailing tool call or states.json step that
+        # the other file does not have yet. Keep the agreeing prefix.
+        prefix = _prefix_if_only_tail_disagrees(executions, commanded)
+        if prefix is not None:
+            executions = executions[:prefix]
+            commanded = commanded[:prefix]
     if not transcript_missing and len(executions) != len(commanded):
         warnings.append(
             "execution count disagrees: "
@@ -240,6 +247,40 @@ def convert_episode(
     ]
     (out / "decisions.jsonl").write_text("".join(line + "\n" for line in lines))
     return out
+
+
+def _command_action(step: dict[str, Any]) -> str:
+    command = step.get("command")
+    if not isinstance(command, dict):
+        return ""
+    action = command.get("action")
+    return action if isinstance(action, str) else ""
+
+
+def _prefix_if_only_tail_disagrees(
+    executions: list[_Call], commanded: list[dict[str, Any]]
+) -> int | None:
+    """Return the agreeing prefix length when only the last decision disagrees.
+
+    ``None`` means the existing alignment, including a full match and any
+    disagreement that is not confined to one trailing decision.
+    """
+    overlap = min(len(executions), len(commanded))
+    prefix = 0
+    for index in range(overlap):
+        if executions[index].name != _command_action(commanded[index]):
+            break
+        prefix += 1
+    else:
+        extra = abs(len(executions) - len(commanded))
+        if extra == 1 and prefix > 0:
+            return prefix
+        return None
+    exec_left = len(executions) - prefix
+    cmd_left = len(commanded) - prefix
+    if prefix > 0 and exec_left == 1 and cmd_left == 1:
+        return prefix
+    return None
 
 
 def _disagreement(warnings: list[str]) -> bool:

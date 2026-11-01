@@ -91,13 +91,20 @@ retry2의 긴 턴은 출력 토큰당 중앙 0.108초다. 같은 기계의 스�
 - planner timeout은 7200초에서 18000초로 올린다. 2.5배이고, 스모크의 느린 끝(0.044초) 대비 중앙값 0.108초의 비율이다. 4배(28800초)까지는 올리지 않는다.
 - pi0.5는 bf16 그대로다. GPU 2. GPU 3은 쓰지 않는다.
 
-## 10. timeout이면 transcript가 비는 이유
+## 10. timeout transcript는 대화를 남기고 이유를 적는다
 
-2026-10-30. 자세한 경로는 `notes/batch01_results.md` 10절. RPent는 고치지 않았다. collect는 `50717fa`다.
+2026-11-01. collect `8852591`. `5960405`가 메시지 목록을 공유하게 했고, 이 커밋이 끝난 이유를 붙인다. 자세한 경로는 `notes/batch01_results.md` 10절.
 
-`main()`은 `planner.solve()`가 돌아온 뒤에만 `result.messages`를 붙인다. 벽시계 timeout은 `ApiAgentLoop.solve`가 `_solve`를 취소하고, observer가 쌓던 대화를 버린 뒤 시작 user 메시지 하나만 반환한다. task 0, swap 0, swap 1의 tool 실행 0건이 이 경로다. `ModelTimeoutError`는 `_solve`가 이미 붙인 목록을 반환하므로 task 2는 끝난 턴이 남는다.
+대화를 잃지 않는 방법은 두 가지였다.
 
-제안: `solve()`가 메시지 목록을 만들어 `_solve`에 넘기고, `TimeoutError`여도 그 목록을 반환한다. `finish_result`와 error 문자열은 그대로다. 목록을 안 넘기면 지금과 같다. `main()`은 그대로 둔다.
+- 턴마다 transcript 파일을 다시 쓴다. 프로세스가 죽어도 파일에 대화가 남지만, 매 턴 저장이 더 크다.
+- `solve()`가 목록을 만들어 `_solve`에 넘기고, 벽시계 `TimeoutError`여도 그 목록을 반환한다. 취소는 await 경계에서만 일어나서, 목록에는 그때까지 붙은 완전한 메시지만 있다. `ModelTimeoutError`는 원래 그 목록으로 돌아온다.
+
+더 작은 쪽인 두 번째를 썼다. `finish_result`, `stats`, error 문자열은 그대로다. 목록을 안 넘기면 `_solve`가 직접 만든다. interactive와 dashboard의 정상 경로는 그대로다.
+
+벽시계 timeout의 `terminated_by`는 `planner_timeout`이다. `ModelTimeoutError`는 `model_timeout`이다. 정상 종료는 이 키가 없다. `main()`은 값이 있을 때만 transcript JSON에 넣는다.
+
+변환기는 tool 호출이 있으면 `transcript_missing`으로 두지 않는다. 어긋남이 마지막 결정 하나뿐이면 그 앞까지를 맞춘 것으로 남긴다. 가운데가 어긋나거나 두 개 이상 남으면 예전처럼 `matched`가 false다.
 
 ## 11. 변환기 v0.3은 구현됐다
 
