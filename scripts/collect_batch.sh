@@ -123,6 +123,9 @@ set +u
 # shellcheck disable=SC1091
 source "$ROOT/env.sh"
 set -u
+# Dotfiles and library caches stay off the root disk.
+export HOME=/data/yunji/latent-planner-work/tmp/install-home
+mkdir -p "$HOME"
 reject_gpu3
 
 require_var RPENT_DIR
