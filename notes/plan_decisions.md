@@ -115,3 +115,36 @@ retry2의 긴 턴은 출력 토큰당 중앙 0.108초다. 같은 기계의 스�
 - `pi0_pick`이 success false이고 같은 prompt로 다시 집지 않으며 에피소드가 `terminated` true로 끝나면 `primitive_success`는 None이고, `labels.success_overridden`은 `terminal_success`다.
 
 시간 제한으로 끝난 retry2 4개는 `budget_timeout`으로 둔다. 코드의 분류 적용은 이 변환기에 들어 있다.
+
+## 12. 세 suite의 eef 차이는 장면 높이다
+
+2026-11-05. 근거는 `notes/run_log_20261103.md`, `notes/coordinate_frames.md`.
+
+object, libero_10, goal의 reset eef z는 0.261, 0.681, 1.173이다. base z는 0, 0.42, 0.912다. eef z − base z는 세 suite 모두 0.261 m다. 로봇 루트 대비 홈 자세는 같고, suite가 그 루트를 다른 world z에 둔다.
+
+10 cm 기준은 base를 빼지 않은 world z에 걸었다.
+
+결정: 패치는 정상이다. 차이는 장면 높이다. 이후 높이 비교는 eef − base로 한다.
+
+## 13. flash replay는 pi0_pick부터 갈라진다
+
+2026-11-05. 근거는 `notes/run_log_20261103_flash.md`, `notes/sim_snapshot.md` 3절. 3절에서 미뤄 둔 결정론을 봤다.
+
+같은 init에서 두 번 재생했다. reset과 분석적 primitive인 명령 0 `move_to`는 원본과 비트 단위로 같다. 명령 1 `pi0_pick`(step 2)부터 A, B, 원본이 갈라진다. `sample_noise`는 시드를 받지 않는다.
+
+결정: 분석적 primitive까지는 결정적이다. `pi0_pick`부터는 π0.5 노이즈 시드가 없어 갈라진다. 이 재생만으로는 실패 상태를 다시 만들 수 없다.
+
+## 14. online 재라벨링의 복원 방법은 실험 1·2 뒤에 고른다
+
+2026-11-05. 3절의 선택지를 지금 닫지 않는다.
+
+- (a) π0.5 `sample_noise`에 시드를 넣는다.
+- (b) `set_state`로 상태를 일부 되돌리고 컨트롤러를 다시 설정한다.
+
+결정: 실험 1·2가 끝난 뒤에 고른다. 그 전에 둘 중 하나를 구현하지 않는다.
+
+## 15. 실험 3 전 다중 답 확인은 대화를 다시 묻는다
+
+2026-11-05.
+
+결정: 실험 3 전에 다중 답을 확인할 때는 시뮬레이터를 복원하지 않는다. 같은 대화를 다시 질의한다.
