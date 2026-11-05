@@ -26,6 +26,8 @@ RPent 안에 중간 상태를 저장했다 되돌리는 코드는 없다. 시뮬
 
 대안: RPent flash replay가 기록된 primitive 명령을 다시 실행한다. 같은 초기 상태에서 k번째까지 재생하면 실패 상태에 다시 도달할 수 있다. 관건은 VLA 샘플링 시드를 고정했을 때 결정론이 보장되는지다. 이 결정론은 아직 보지 않았다. 다음 수집 전에 확인할 항목으로 둔다.
 
+→ 13절에서 확인: 분석적 primitive까지 결정적, pi0_pick부터 갈라짐.
+
 ## 4. 훅보다 기존 로그 변환이 먼저
 
 proxy는 쓰지 않는다. 평가 경로(`eval.direct`)에서는 안 켜지고, 켜지면 샘플링을 RL용으로 덮어써서 teacher 수집에 맞지 않는다.
@@ -54,6 +56,8 @@ pi0.5 predict는 bf16 평균 0.84초, fp16 래퍼는 0.34초다. 병목은 플�
 
 결정: 실행 결정만 바꾸는 latent planner의 가속은 제한적이다. 쿼리 동작, 특히 실패 감지로 쓰이는 `view_env_state`는 observation 입력과 decoder가 흡수해야 한다. part 2를 설계할 때 다시 본다.
 
+조회 호출 145개 중 (a) 다음 실행 인자 13, (b) 확인 22, (c) 중복 6, 그 밖 104다. 근거는 `notes/query_calls.md`.
+
 ## 7. libero_10_task task 2는 수집과 평가에서 뺀다
 
 2026-10-29. 근거는 `notes/batch01_env_failures.md`.
@@ -76,7 +80,7 @@ pi0.5 predict는 bf16 평균 0.84초, fp16 래퍼는 0.34초다. 병목은 플�
 - 재시작 기록 경로는 `/data/yunji/latent-planner-work/logs/vllm_restarts.log`다. 아직 파일이 없다. 재시작이 한 번도 없었다.
 - `nvidia-smi topo -m`에서 GPU0–GPU1은 `NODE`다. NVLink(`NV#`)가 아니고, 같은 NUMA 안에서 PCIe와 Host Bridge를 거친다. GPU1–GPU0도 `NODE`다.
 
-## 9. 다음 수집은 TP=2를 유지한다 (제안)
+## 9. 다음 수집은 TP=2를 유지한다 (결정)
 
 2026-10-30. 근거는 `notes/batch01_results.md` 6절. 실행하지 않았다.
 
@@ -90,6 +94,8 @@ retry2의 긴 턴은 출력 토큰당 중앙 0.108초다. 같은 기계의 스�
 - 동시 실행은 4가 아니라 2로 줄인다. KV는 4도 들어가지만, 토큰당 시간이 스모크의 2.5배 안에 머물게 하려는 쪽이다.
 - planner timeout은 7200초에서 18000초로 올린다. 2.5배이고, 스모크의 느린 끝(0.044초) 대비 중앙값 0.108초의 비율이다. 4배(28800초)까지는 올리지 않는다.
 - pi0.5는 bf16 그대로다. GPU 2. GPU 3은 쓰지 않는다.
+
+batch02부터 이 구성을 적용했다.
 
 ## 10. timeout transcript는 대화를 남기고 이유를 적는다
 
@@ -148,3 +154,21 @@ object, libero_10, goal의 reset eef z는 0.261, 0.681, 1.173이다. base z는 0
 2026-11-05.
 
 결정: 실험 3 전에 다중 답을 확인할 때는 시뮬레이터를 복원하지 않는다. 같은 대화를 다시 질의한다.
+
+## 16. 실험 계획
+
+2026-11-05.
+
+순서는 실험 1 Direct MLP, 실험 2 Deterministic latent, 실험 3 Distribution이다. 실험 3은 VQ를 먼저 하고, 필요하면 flow matching을 본다.
+
+공통 지표는 전체 결정 일치율, role별 일치율(특히 실패 직후), 결정당 시간이다.
+
+판단: 실험 1이 충분하면 latent는 필요 없다. 실험 2가 실패 직후에서 나으면 latent의 근거가 된다. 실험 3은 다중 답이 있을 때만 한다.
+
+## 17. 실험 1 출력 범위
+
+2026-11-05.
+
+모델은 primitive 종류, 대상 물체, 이산 인자만 예측한다. `move_to` 좌표는 실행 때 SAM3와 `back_project`로 구한다.
+
+근거: 좌표는 원래 `back_project`에서 나온다. 세 실험의 비교 조건을 같게 유지한다.
